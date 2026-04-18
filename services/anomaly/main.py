@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import AnomalyRequest, AnomalyResponse
 from detector import detect_anomalies, generate_summary, METHODOLOGY
+from auth_utils import get_current_user_role
 
 app = FastAPI(
     title="FairGig Anomaly Detection Service",
@@ -32,7 +33,7 @@ def health_check():
 
 
 @app.post("/api/anomaly/detect", response_model=AnomalyResponse, tags=["Anomaly Detection"])
-def detect(request: AnomalyRequest):
+def detect(request: AnomalyRequest, user: dict = Depends(get_current_user_role)):
     """
     **Anomaly Detection Endpoint**
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { motion } from 'framer-motion';
 import { Wallet } from 'lucide-react';
@@ -81,7 +81,11 @@ const Login = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
             <button onClick={() => setDemoUser('ahmed@gmail.com')} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px' }}>Worker</button>
             <button onClick={() => setDemoUser('advocate@fairgig.com')} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px' }}>Advocate</button>
-            <button onClick={() => setDemoUser('verifier@fairgig.com')} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px' }}>Verifier</button>
+          </div>
+          <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              Don't have an account? <Link to="/signup" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Sign up here</Link>.
+            </p>
           </div>
         </div>
       </motion.div>

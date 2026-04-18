@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './AuthContext';
 
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdvocateDashboard from './pages/AdvocateDashboard';
 import VerifierPanel from './pages/VerifierPanel';
@@ -46,6 +47,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           
           <Route path="/" element={<DefaultDashboard />} />
 

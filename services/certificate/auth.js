@@ -1,3 +1,4 @@
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'fairgig-secret-key-softec-2026-change-in-production';

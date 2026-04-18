@@ -1,18 +1,19 @@
 import os
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
-# Analytics service reads from the earnings database (read-only)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EARNINGS_DB_PATH = os.path.join(BASE_DIR, "..", "earnings", "earnings.db")
-EARNINGS_DB_URL = f"sqlite:///{EARNINGS_DB_PATH}"
+load_dotenv()
 
-earnings_engine = create_engine(EARNINGS_DB_URL, connect_args={"check_same_thread": False})
-EarningsSession = sessionmaker(autocommit=False, autoflush=False, bind=earnings_engine)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/analytics_db")
 
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def get_earnings_db():
-    db = EarningsSession()
+def get_db():
+    db = SessionLocal()
     try:
         yield db
     finally:

@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
+const { initDb } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 8004;
@@ -18,7 +20,11 @@ app.get('/', (req, res) => {
 app.use('/api/grievances', routes);
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`FairGig Grievance Service running on http://localhost:${PORT}`);
-  console.log(`API docs: This is a REST API. See README.md for endpoints.`);
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`FairGig Grievance Service running on http://localhost:${PORT}`);
+    console.log(`API docs: This is a REST API. See README.md for endpoints.`);
+  });
+}).catch(err => {
+  console.error("Database initialization failed:", err);
 });

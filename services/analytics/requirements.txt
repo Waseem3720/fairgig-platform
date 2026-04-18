@@ -3,3 +3,6 @@ uvicorn
 sqlalchemy
 python-jose[cryptography]
 pydantic
+psycopg2-binary
+python-dotenv
+httpx

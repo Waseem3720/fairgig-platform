@@ -8,6 +8,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ---- Configuration ----
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fairgig-secret-key-softec-2026-change-in-production")

@@ -1,10 +1,13 @@
 import io
 import csv
+import os
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
+import cloudinary
+import cloudinary.uploader
 from database import get_db
 from models import ShiftLog, VerificationStatus
 from schemas import (
@@ -12,6 +15,15 @@ from schemas import (
     ShiftLogResponse, EarningsSummary, CityMedian, MessageResponse,
 )
 from auth_utils import get_current_user_id, get_current_user_role, require_role
+from dotenv import load_dotenv
+
+load_dotenv()
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 router = APIRouter()
 
@@ -185,23 +197,18 @@ async def upload_screenshot(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Upload an earnings screenshot for verification."""
+    """Upload an earnings screenshot for verification via Cloudinary."""
     shift = db.query(ShiftLog).filter(ShiftLog.id == shift_id, ShiftLog.worker_id == user_id).first()
     if not shift:
         raise HTTPException(status_code=404, detail="Shift not found")
 
-    # Save screenshot to uploads directory
-    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-    os.makedirs(upload_dir, exist_ok=True)
+    try:
+        content = await file.read()
+        result = cloudinary.uploader.upload(content, folder="fairgig_screenshots")
+        shift.screenshot_url = result.get("secure_url")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
-    filename = f"shift_{shift_id}_{file.filename}"
-    filepath = os.path.join(upload_dir, filename)
-
-    content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
-
-    shift.screenshot_url = f"/uploads/{filename}"
     shift.verification_status = VerificationStatus.pending
     db.commit()
     db.refresh(shift)

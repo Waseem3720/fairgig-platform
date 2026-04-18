@@ -1,12 +1,12 @@
 import axios from 'axios';
 
 // Base URLs for all 6 microservices
-const AUTH_URL = 'http://localhost:8001/api/auth';
-const EARNINGS_URL = 'http://localhost:8002/api/earnings';
-const ANOMALY_URL = 'http://localhost:8003/api/anomaly';
-const GRIEVANCE_URL = 'http://localhost:8004/api/grievances';
-const ANALYTICS_URL = 'http://localhost:8005/api/analytics';
-const CERTIFICATE_URL = 'http://localhost:8006/api/certificate';
+const AUTH_URL = import.meta.env.VITE_AUTH_URL || 'http://localhost:8001/api/auth';
+const EARNINGS_URL = import.meta.env.VITE_EARNINGS_URL || 'http://localhost:8002/api/earnings';
+const ANOMALY_URL = import.meta.env.VITE_ANOMALY_URL || 'http://localhost:8003/api/anomaly';
+const GRIEVANCE_URL = import.meta.env.VITE_GRIEVANCE_URL || 'http://localhost:8004/api/grievances';
+const ANALYTICS_URL = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:8005/api/analytics';
+const CERTIFICATE_URL = import.meta.env.VITE_CERTIFICATE_URL || 'http://localhost:8006/api/certificate';
 
 // Helper to configure tokens
 const getAuthHeaders = () => {

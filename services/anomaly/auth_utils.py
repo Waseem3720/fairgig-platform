@@ -1,5 +1,4 @@
 import os
-from datetime import datetime, timezone
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,7 +11,6 @@ ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
-
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -23,23 +21,11 @@ def decode_token(token: str) -> dict:
             detail="Invalid or expired token",
         )
 
-
-def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> int:
-    payload = decode_token(credentials.credentials)
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return int(user_id)
-
-
 def get_current_user_role(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     payload = decode_token(credentials.credentials)
     return {"id": int(payload.get("sub")), "role": payload.get("role", "worker")}
-
 
 def require_role(*roles):
     def role_checker(

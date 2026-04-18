@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fairgig-secret-key-softec-2026-change-in-production")
 ALGORITHM = "HS256"

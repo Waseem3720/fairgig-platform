@@ -1,134 +1,142 @@
+import os
 import statistics
 from collections import defaultdict
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from database import get_earnings_db
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
+import httpx
 from schemas import (
     PlatformCommissionTrend, IncomeDistribution,
     VulnerableWorker, AdvocateDashboard, PlatformOverview,
 )
 from auth_utils import require_advocate
+from dotenv import load_dotenv
+
+load_dotenv()
+
+EARNINGS_SERVICE_URL = os.getenv("EARNINGS_SERVICE_URL", "http://localhost:8002")
 
 router = APIRouter()
 
+async def fetch_shifts(request: Request):
+    """Helper to fetch all shifts from Earnings service via API."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{EARNINGS_SERVICE_URL}/api/earnings/shifts?limit=1000",
+                headers={"Authorization": auth_header}
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Earnings API unavailable: {str(exc)}")
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail="Failed to fetch earnings data")
 
 @router.get("/dashboard", response_model=AdvocateDashboard)
-def get_advocate_dashboard(
+async def get_advocate_dashboard(
+    request: Request,
     user: dict = Depends(require_advocate),
-    db: Session = Depends(get_earnings_db),
 ):
-    """
-    Advocate analytics dashboard — aggregate KPIs.
-    - Platform commission trends over time
-    - Income distribution by city zone
-    - Workers with >20% income drop (vulnerability flags)
-    """
+    shifts = await fetch_shifts(request)
+    
+    total_shifts = len(shifts)
+    workers_set = set(s.get("worker_id") for s in shifts)
+    total_workers = len(workers_set)
+    platforms_set = set(s.get("platform") for s in shifts)
+    total_platforms = len(platforms_set)
+    
+    # Avg commission rate
+    gross_sum = 0
+    deduction_sum = 0
+    for s in shifts:
+        if s.get("gross_earned", 0) > 0:
+            gross_sum += s.get("gross_earned")
+            deduction_sum += s.get("platform_deductions", 0)
+    
+    avg_commission = round((deduction_sum * 100.0 / gross_sum), 2) if gross_sum > 0 else 0.0
 
-    # Basic stats
-    total_workers = db.execute(text("SELECT COUNT(DISTINCT worker_id) FROM shift_logs")).scalar() or 0
-    total_shifts = db.execute(text("SELECT COUNT(*) FROM shift_logs")).scalar() or 0
-    total_platforms = db.execute(text("SELECT COUNT(DISTINCT platform) FROM shift_logs")).scalar() or 0
-
-    # Average commission rate
-    avg_result = db.execute(text(
-        "SELECT AVG(CASE WHEN gross_earned > 0 THEN (platform_deductions * 100.0 / gross_earned) ELSE 0 END) FROM shift_logs"
-    )).scalar()
-    avg_commission = round(avg_result or 0, 2)
-
-    # Commission trends by platform by month
-    trends_rows = db.execute(text("""
-        SELECT platform,
-               strftime('%Y-%m', date) as month,
-               AVG(CASE WHEN gross_earned > 0 THEN platform_deductions * 100.0 / gross_earned ELSE 0 END) as avg_rate,
-               MIN(CASE WHEN gross_earned > 0 THEN platform_deductions * 100.0 / gross_earned ELSE 0 END) as min_rate,
-               MAX(CASE WHEN gross_earned > 0 THEN platform_deductions * 100.0 / gross_earned ELSE 0 END) as max_rate,
-               COUNT(*) as shift_count
-        FROM shift_logs
-        GROUP BY platform, month
-        ORDER BY month DESC, platform
-        LIMIT 100
-    """)).fetchall()
-
-    commission_trends = [
-        PlatformCommissionTrend(
-            platform=r[0], month=r[1],
-            avg_commission_rate=round(r[2], 2),
-            min_commission_rate=round(r[3], 2),
-            max_commission_rate=round(r[4], 2),
-            shift_count=r[5],
-        ) for r in trends_rows
-    ]
-
+    # Commission Trends
+    trends_map = defaultdict(list)
+    for s in shifts:
+        if s.get("gross_earned", 0) > 0:
+            month = s.get("date")[:7]
+            platform = s.get("platform")
+            rate = s.get("platform_deductions", 0) * 100.0 / s.get("gross_earned", 0)
+            trends_map[(platform, month)].append(rate)
+            
+    commission_trends = []
+    for (plat, month), rates in trends_map.items():
+        commission_trends.append(PlatformCommissionTrend(
+            platform=plat,
+            month=month,
+            avg_commission_rate=round(statistics.mean(rates), 2),
+            min_commission_rate=round(min(rates), 2),
+            max_commission_rate=round(max(rates), 2),
+            shift_count=len(rates)
+        ))
+    commission_trends.sort(key=lambda x: x.month, reverse=True)
+    
     # Income distribution by city
-    city_rows = db.execute(text("""
-        SELECT city, category,
-               AVG(net_received) as avg_net,
-               MIN(net_received) as min_net,
-               MAX(net_received) as max_net,
-               COUNT(DISTINCT worker_id) as worker_count
-        FROM shift_logs
-        WHERE city IS NOT NULL
-        GROUP BY city, category
-        ORDER BY city
-    """)).fetchall()
+    city_cat_map = defaultdict(list)
+    for s in shifts:
+        city = s.get("city")
+        cat = s.get("category", "N/A")
+        if city:
+            city_cat_map[(city, cat)].append(s.get("net_received", 0))
 
     income_distributions = []
-    for r in city_rows:
-        # Calculate median
-        nets = db.execute(text(
-            "SELECT net_received FROM shift_logs WHERE city = :city AND category = :cat ORDER BY net_received"
-        ), {"city": r[0], "cat": r[1]}).fetchall()
-        net_values = [n[0] for n in nets]
-        median_val = statistics.median(net_values) if net_values else 0
+    for (city, cat), nets in city_cat_map.items():
+        if nets:
+            income_distributions.append(IncomeDistribution(
+                city=city,
+                category=cat,
+                avg_net_daily=round(statistics.mean(nets), 2),
+                median_net_daily=round(statistics.median(nets), 2),
+                min_net_daily=round(min(nets), 2),
+                max_net_daily=round(max(nets), 2),
+                worker_count=len(set(s.get("worker_id") for s in shifts if s.get("city") == city and s.get("category") == cat))
+            ))
 
-        income_distributions.append(IncomeDistribution(
-            city=r[0], category=r[1],
-            avg_net_daily=round(r[2], 2),
-            median_net_daily=round(median_val, 2),
-            min_net_daily=round(r[3], 2),
-            max_net_daily=round(r[4], 2),
-            worker_count=r[5],
-        ))
-
-    # Vulnerability flags — workers with >20% income drop month-over-month
-    monthly_rows = db.execute(text("""
-        SELECT worker_id, strftime('%Y-%m', date) as month, SUM(net_received) as total_net,
-               MAX(platform) as platform, MAX(city) as city
-        FROM shift_logs
-        GROUP BY worker_id, month
-        ORDER BY worker_id, month
-    """)).fetchall()
-
-    worker_monthly = defaultdict(list)
-    for r in monthly_rows:
-        worker_monthly[r[0]].append({
-            "month": r[1], "total": r[2], "platform": r[3], "city": r[4]
-        })
+    # Vulnerability (income drops > 20%)
+    worker_monthly = defaultdict(lambda: defaultdict(float))
+    worker_platform = defaultdict(str)
+    worker_city = defaultdict(str)
+    
+    for s in shifts:
+        wid = s.get("worker_id")
+        month = s.get("date")[:7]
+        worker_monthly[wid][month] += s.get("net_received", 0)
+        worker_platform[wid] = s.get("platform")
+        worker_city[wid] = s.get("city")
 
     vulnerable_workers = []
-    for worker_id, months in worker_monthly.items():
-        if len(months) >= 2:
-            for i in range(1, len(months)):
-                prev = months[i - 1]["total"]
-                curr = months[i]["total"]
-                if prev > 0:
-                    drop = ((curr - prev) / prev) * 100
-                    if drop < -20:
-                        vulnerable_workers.append(VulnerableWorker(
-                            worker_id=worker_id,
-                            prev_month=months[i - 1]["month"],
-                            curr_month=months[i]["month"],
-                            prev_income=round(prev, 2),
-                            curr_income=round(curr, 2),
-                            drop_percentage=round(abs(drop), 2),
-                            platform=months[i]["platform"],
-                            city=months[i]["city"],
-                        ))
+    for wid, months_data in worker_monthly.items():
+        sorted_months = sorted(months_data.keys())
+        for i in range(1, len(sorted_months)):
+            prev_m = sorted_months[i-1]
+            curr_m = sorted_months[i]
+            prev = months_data[prev_m]
+            curr = months_data[curr_m]
+            
+            if prev > 0:
+                drop = ((curr - prev) / prev) * 100
+                if drop < -20:
+                    vulnerable_workers.append(VulnerableWorker(
+                        worker_id=wid,
+                        prev_month=prev_m,
+                        curr_month=curr_m,
+                        prev_income=round(prev, 2),
+                        curr_income=round(curr, 2),
+                        drop_percentage=round(abs(drop), 2),
+                        platform=worker_platform[wid],
+                        city=worker_city[wid],
+                    ))
 
-    # Sort by drop severity
-    vulnerable_workers.sort(key=lambda v: v.drop_percentage, reverse=True)
+    vulnerable_workers.sort(key=lambda x: x.drop_percentage, reverse=True)
 
     return AdvocateDashboard(
         total_workers=total_workers,
@@ -138,74 +146,79 @@ def get_advocate_dashboard(
         commission_trends=commission_trends,
         income_distributions=income_distributions,
         vulnerable_workers=vulnerable_workers[:20],
-        top_complaint_categories=[],  # Filled from grievance service in frontend
+        top_complaint_categories=[]
     )
 
-
 @router.get("/platforms", response_model=List[PlatformOverview])
-def get_platform_overview(
+async def get_platform_overview(
+    request: Request,
     user: dict = Depends(require_advocate),
-    db: Session = Depends(get_earnings_db),
 ):
-    """Overview stats per platform."""
-    rows = db.execute(text("""
-        SELECT platform,
-               COUNT(DISTINCT worker_id) as workers,
-               COUNT(*) as shifts,
-               AVG(CASE WHEN gross_earned > 0 THEN platform_deductions * 100.0 / gross_earned ELSE 0 END) as avg_commission,
-               AVG(CASE WHEN hours_worked > 0 THEN net_received / hours_worked ELSE 0 END) as avg_hourly
-        FROM shift_logs
-        GROUP BY platform
-        ORDER BY shifts DESC
-    """)).fetchall()
-
-    return [
-        PlatformOverview(
-            platform=r[0], worker_count=r[1], total_shifts=r[2],
-            avg_commission_rate=round(r[3], 2),
-            avg_hourly_rate=round(r[4], 2),
-            total_complaints=0,
-        ) for r in rows
-    ]
-
+    shifts = await fetch_shifts(request)
+    
+    stats = defaultdict(lambda: {"workers": set(), "shifts": 0, "gross": 0, "deductions": 0, "net": 0, "hours": 0})
+    for s in shifts:
+        plat = s.get("platform")
+        stats[plat]["workers"].add(s.get("worker_id"))
+        stats[plat]["shifts"] += 1
+        stats[plat]["gross"] += s.get("gross_earned", 0)
+        stats[plat]["deductions"] += s.get("platform_deductions", 0)
+        stats[plat]["net"] += s.get("net_received", 0)
+        stats[plat]["hours"] += s.get("hours_worked", 0)
+        
+    result = []
+    for plat, data in stats.items():
+        avg_comm = (data["deductions"] * 100 / data["gross"]) if data["gross"] > 0 else 0
+        avg_hr = (data["net"] / data["hours"]) if data["hours"] > 0 else 0
+        result.append(PlatformOverview(
+            platform=plat,
+            worker_count=len(data["workers"]),
+            total_shifts=data["shifts"],
+            avg_commission_rate=round(avg_comm, 2),
+            avg_hourly_rate=round(avg_hr, 2),
+            total_complaints=0
+        ))
+    return result
 
 @router.get("/income-trends")
-def get_income_trends(
+async def get_income_trends(
+    request: Request,
     platform: Optional[str] = None,
     city: Optional[str] = None,
     months: int = Query(6, le=24),
     user: dict = Depends(require_advocate),
-    db: Session = Depends(get_earnings_db),
 ):
-    """Monthly income trends across all workers (anonymised aggregate)."""
-    query = """
-        SELECT strftime('%Y-%m', date) as month,
-               AVG(net_received) as avg_net,
-               AVG(CASE WHEN hours_worked > 0 THEN net_received / hours_worked ELSE 0 END) as avg_hourly,
-               COUNT(DISTINCT worker_id) as active_workers,
-               COUNT(*) as total_shifts
-        FROM shift_logs
-        WHERE 1=1
-    """
-    params = {}
-    if platform:
-        query += " AND platform = :platform"
-        params["platform"] = platform
-    if city:
-        query += " AND city = :city"
-        params["city"] = city
-
-    query += " GROUP BY month ORDER BY month DESC LIMIT :months"
-    params["months"] = months
-
-    rows = db.execute(text(query), params).fetchall()
-
-    return [
-        {
-            "month": r[0],
-            "avg_net_daily": round(r[1], 2),
-            "avg_hourly_rate": round(r[2], 2),
-            "active_workers": r[3],
-            "total_shifts": r[4],
-        } for r in rows
-    ]
+    shifts = await fetch_shifts(request)
+    
+    month_data = defaultdict(lambda: {"net": [], "hours": [], "workers": set()})
+    
+    for s in shifts:
+        if platform and s.get("platform") != platform:
+            continue
+        if city and s.get("city") != city:
+            continue
+            
+        month = s.get("date")[:7]
+        month_data[month]["net"].append(s.get("net_received", 0))
+        month_data[month]["hours"].append(s.get("hours_worked", 0))
+        month_data[month]["workers"].add(s.get("worker_id"))
+        
+    sorted_months = sorted(month_data.keys(), reverse=True)[:months]
+    
+    result = []
+    for m in sorted_months:
+        data = month_data[m]
+        total_net = sum(data["net"])
+        total_hrs = sum(data["hours"])
+        avg_net = total_net / len(data["net"]) if data["net"] else 0
+        avg_hr = total_net / total_hrs if total_hrs > 0 else 0
+        
+        result.append({
+            "month": m,
+            "avg_net_daily": round(avg_net, 2),
+            "avg_hourly_rate": round(avg_hr, 2),
+            "active_workers": len(data["workers"]),
+            "total_shifts": len(data["net"]),
+        })
+        
+    return result
