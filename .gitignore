@@ -1,9 +1,35 @@
+# Dependencies
 node_modules/
+
+# Environment files
 .env
+
+# OS files
 .DS_Store
+
+# Build outputs
 dist/
 build/
+
+# Coverage reports
 coverage/
+
+# Logs
 *.log
+
+# Python cache
 __pycache__/
+*.pyc
+
+# Databases (VERY IMPORTANT for your project)
 *.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Vite / frontend cache (optional but good)
+.vite/
+
+# IDE files (optional)
+.vscode/
