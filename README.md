@@ -8,9 +8,9 @@ FairGig empowers gig workers to log, verify, and understand their earnings acros
 This project strictly adheres to the competition constraints:
 - **No Docker needed.**
 - **6 Microservices** (4 FastAPI + 2 Node.js).
-- **Modern frontend (React + Vite)** using dynamic glassmorphism aesthetics.
+- **Modern React (Vite) frontend with glassmorphism UI**
 - **Database Architecture:** Each microservice uses an isolated SQLite database for development simplicity. The architecture is fully database-agnostic and can be migrated to PostgreSQL in production without architectural changes.
-- **Fully Seeded Dataset:** Simulating 100+ workers across Lahore, Karachi, and Islamabad.
+- **Fully seeded dataset** simulating 100+ gig workers across Lahore, Karachi, and Islamabad.
 
 ## 🔌 Inter-Service Communication
 - **Auth Service:** Issues JWT tokens used across all services
@@ -21,7 +21,7 @@ This project strictly adheres to the competition constraints:
 
 ## 🏃‍♂️ How to Run the App Locally
 
-Each service is independently runnable using a single command. Services can be started in separate terminals or managed individually. *(Make sure you have Node.js 18+ and Python 3.10+ installed).*
+Each service is independently runnable using a single command. Each service is independent and can be scaled or deployed separately. Services can be started in separate terminals or managed individually. *(Make sure you have Node.js 18+ and Python 3.10+ installed).*
 
 ### 1. Start the Auth Service (FastAPI)
 ```bash
@@ -103,4 +103,4 @@ The database is already **seeded** and populated with over 3,000 shift logs and 
 ## 🧠 System Philosophy
 FairGig is not just a data logging system — it is a transparency layer for gig economies that transforms raw earnings into verified, explainable, and analyzable financial insights to detect systemic unfairness.
 
-The system is designed to surface systemic financial inequality in gig economies through data-driven transparency and statistical analysis.
+The system is designed as a real-world inspired transparency platform for detecting systemic income unfairness in gig economies using modular microservices and statistical analysis.

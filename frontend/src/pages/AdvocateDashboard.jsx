@@ -22,7 +22,7 @@ const AdvocateDashboard = () => {
     fetchData();
   }, []);
 
-  if (loading || !data) return <div style={{padding: '50px'}}>Loading Advocate Panel...</div>;
+  if (loading || !data) return <div style={{ padding: '50px' }}>Loading Advocate Panel...</div>;
 
   // Format commission trends for Recharts
   const trendsByPlatform = {};
@@ -41,46 +41,46 @@ const AdvocateDashboard = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
         <div className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Total Monitored Workers</h3>
+          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Total Monitored Workers</h3>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users size={24} color="var(--info)" /> {data.total_workers.toLocaleString()}
           </h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Unique gig workers logging shifts</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>Unique gig workers logging shifts</p>
         </div>
         <div className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Vulnerability Flags</h3>
+          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Vulnerability Flags</h3>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
             <ShieldAlert size={24} /> {data.vulnerable_workers.length}
           </h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Workers w/ &gt;20% income drop</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>Workers w/ &gt;20% income drop</p>
         </div>
         <div className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Avg Platform Commission</h3>
+          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Avg Platform Commission</h3>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--warning)' }}>
             <TrendingDown size={24} /> {data.avg_commission_rate.toFixed(1)}%
           </h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Platform average deduction</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>Platform average deduction</p>
         </div>
         <div className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Total Monitored Shifts</h3>
+          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>Total Monitored Shifts</h3>
           <h2>{data.total_shifts.toLocaleString()}</h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Logged across {data.total_platforms} platforms</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>Logged across {data.total_platforms} platforms</p>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        
+
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{marginBottom: '20px'}}>Commission Rates Over Time</h3>
+          <h3 style={{ marginBottom: '20px' }}>Commission Rates Over Time</h3>
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendsArray}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-strong)" vertical={false} />
-                <XAxis dataKey="month" stroke="var(--text-muted)" tick={{fontSize: 12}} />
-                <YAxis stroke="var(--text-muted)" tick={{fontSize: 12}} unit="%" domain={['auto', 'auto']} />
-                <RechartsTooltip 
+                <XAxis dataKey="month" stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
+                <YAxis stroke="var(--text-muted)" tick={{ fontSize: 12 }} unit="%" domain={['auto', 'auto']} />
+                <RechartsTooltip
                   contentStyle={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-strong)', borderRadius: '8px' }}
-                  itemStyle={{color: '#fff'}}
+                  itemStyle={{ color: '#fff' }}
                 />
                 <Legend />
                 <Line type="monotone" dataKey="Careem" stroke="#0ea5e9" strokeWidth={2} dot={false} />
@@ -98,14 +98,14 @@ const AdvocateDashboard = () => {
             </h3>
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Workers experiencing severe (>20%) month-over-month income drops.
+            Workers experiencing severe &gt;20% month-over-month income drops.
           </p>
           <div style={{ overflowY: 'auto', maxHeight: '250px', paddingRight: '8px' }}>
             {data.vulnerable_workers.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>No severe drops detected.</p>
             ) : (
               data.vulnerable_workers.map((v, i) => (
-                <div key={i} style={{ 
+                <div key={i} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px',
                   borderLeft: `2px solid var(--danger)`
@@ -127,7 +127,7 @@ const AdvocateDashboard = () => {
       </div>
 
       <div className="glass-panel" style={{ padding: '24px' }}>
-        <h3 style={{marginBottom: '20px'}}>Income Distribution by Zone</h3>
+        <h3 style={{ marginBottom: '20px' }}>Income Distribution by Zone</h3>
         <div className="table-container">
           <table className="data-table">
             <thead>
@@ -151,7 +151,7 @@ const AdvocateDashboard = () => {
                     PKR {d.median_net_daily.toLocaleString()}
                   </td>
                   <td>
-                    <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem' }}>View Detials <ArrowUpRight size={14}/></button>
+                    <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem' }}>View Detials <ArrowUpRight size={14} /></button>
                   </td>
                 </tr>
               ))}
