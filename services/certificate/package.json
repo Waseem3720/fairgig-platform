@@ -1,0 +1,16 @@
+{
+  "name": "fairgig-certificate-service",
+  "version": "1.0.0",
+  "description": "FairGig Certificate Renderer - Generates printable HTML income certificates",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.7.0"
+  }
+}
