@@ -15,6 +15,8 @@ const WorkerDashboard = () => {
 
   // Modal states for adding shift
   const [showAddModal, setShowAddModal] = useState(false);
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [newShift, setNewShift] = useState({
     platform: user?.platform || 'Careem',
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -57,11 +59,25 @@ const WorkerDashboard = () => {
   const handleAddShift = async (e) => {
     e.preventDefault();
     try {
-      await api.earnings.createShift(newShift);
+      // Step 1: Create the shift
+      const res = await api.earnings.createShift(newShift);
+      const shiftId = res.data.id;
+
+      // Step 2: Upload screenshot if one was selected
+      if (screenshotFile && shiftId) {
+        setUploadingScreenshot(true);
+        const formData = new FormData();
+        formData.append('file', screenshotFile);
+        await api.earnings.uploadScreenshot(shiftId, formData);
+      }
+
       setShowAddModal(false);
-      fetchData(); // Refresh data
+      setScreenshotFile(null);
+      fetchData();
     } catch (err) {
-      alert("Failed to add shift");
+      alert('Failed to save shift: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setUploadingScreenshot(false);
     }
   };
 
@@ -289,9 +305,48 @@ const WorkerDashboard = () => {
                   <input type="number" className="form-control" value={newShift.net_received} onChange={e => setNewShift({...newShift, net_received: parseFloat(e.target.value)})} required/>
                 </div>
               </div>
+
+              {/* Screenshot Upload */}
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label className="form-label">📸 Earnings Screenshot (Optional but recommended)</label>
+                <div style={{
+                  border: '2px dashed var(--border-strong)',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: screenshotFile ? 'rgba(59,130,246,0.05)' : 'transparent',
+                  transition: 'all 0.2s',
+                }}
+                  onClick={() => document.getElementById('screenshot-input').click()}
+                >
+                  {screenshotFile ? (
+                    <div style={{ color: 'var(--accent-primary)', fontSize: '0.9rem' }}>
+                      ✅ <strong>{screenshotFile.name}</strong>
+                      <br />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click to change</span>
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                      📁 Click to upload screenshot<br />
+                      <span style={{ fontSize: '0.8rem' }}>PNG, JPG accepted • Helps verifiers confirm your earnings</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  id="screenshot-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setScreenshotFile(e.target.files[0] || null)}
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Shift</button>
+                <button type="button" onClick={() => { setShowAddModal(false); setScreenshotFile(null); }} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={uploadingScreenshot}>
+                  {uploadingScreenshot ? 'Uploading Screenshot...' : 'Save Shift'}
+                </button>
               </div>
             </form>
           </div>

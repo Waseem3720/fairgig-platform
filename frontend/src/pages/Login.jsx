@@ -2,49 +2,73 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { motion } from 'framer-motion';
-import { Wallet } from 'lucide-react';
+import { Wallet, ArrowLeft } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('password123'); // Default for demo
+  const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       setError('');
       await login({ email, password });
       navigate('/');
     } catch (err) {
-      setError('Invalid credentials or account deactivated.');
+      setError('Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const setDemoUser = (demoEmail) => {
-    setEmail(demoEmail);
-    setPassword('password123');
-  }
-
   return (
     <div className="auth-wrapper">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      {/* Back to home */}
+      <Link to="/" style={{
+        position: 'absolute', top: '24px', left: '32px',
+        display: 'flex', alignItems: 'center', gap: '6px',
+        color: '#94a3b8', fontSize: '0.88rem', fontWeight: 500,
+        textDecoration: 'none', zIndex: 10,
+      }}>
+        <ArrowLeft size={16} /> Back to Home
+      </Link>
+
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="glass-panel auth-card"
       >
+        {/* Logo + Title */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-primary)', marginBottom: '16px' }}>
-            <Wallet size={32} />
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'rgba(99,102,241,0.15)',
+            border: '1px solid rgba(99,102,241,0.3)',
+            color: '#818cf8', marginBottom: '16px',
+            boxShadow: '0 0 24px rgba(99,102,241,0.2)',
+          }}>
+            <Wallet size={30} />
           </div>
-          <h1>Welcome to FairGig</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Sign in to continue to your dashboard</p>
+          <h1 style={{ fontSize: '1.7rem', marginBottom: '6px' }}>Welcome Back</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.93rem' }}>
+            Sign in to your FairGig account
+          </p>
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '12px', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', color: '#f87171',
+            border: '1px solid rgba(239,68,68,0.25)',
+            padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+            marginBottom: '20px', fontSize: '0.88rem', textAlign: 'center',
+          }}>
             {error}
           </div>
         )}
@@ -52,9 +76,9 @@ const Login = () => {
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
-            <input 
-              type="email" 
-              className="form-control" 
+            <input
+              type="email"
+              className="form-control"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -63,30 +87,37 @@ const Login = () => {
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input 
-              type="password" 
-              className="form-control" 
+            <input
+              type="password"
+              className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              placeholder="••••••••"
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1.05rem', marginTop: '10px' }}>
-            Sign In
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: '8px' }}
+            disabled={loading}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
-        <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-strong)', paddingTop: '24px' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '12px', textAlign: 'center' }}>Competition Demo Logins (password: password123)</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-            <button onClick={() => setDemoUser('ahmed@gmail.com')} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px' }}>Worker</button>
-            <button onClick={() => setDemoUser('advocate@fairgig.com')} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px' }}>Advocate</button>
-          </div>
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Don't have an account? <Link to="/signup" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Sign up here</Link>.
-            </p>
-          </div>
+        <div style={{
+          marginTop: '28px',
+          borderTop: '1px solid var(--border-strong)',
+          paddingTop: '20px', textAlign: 'center',
+        }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Don't have an account?{' '}
+            <Link to="/signup" style={{ color: '#818cf8', fontWeight: 600 }}>
+              Create one →
+            </Link>
+          </p>
         </div>
       </motion.div>
     </div>

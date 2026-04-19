@@ -26,6 +26,11 @@ export const api = {
     getShifts: () => axios.get(`${EARNINGS_URL}/shifts`, getAuthHeaders()),
     createShift: (data) => axios.post(`${EARNINGS_URL}/shifts`, data, getAuthHeaders()),
     getCityMedian: () => axios.get(`${EARNINGS_URL}/city-median`, getAuthHeaders()),
+    uploadScreenshot: (shiftId, formData) => axios.post(
+      `${EARNINGS_URL}/shifts/${shiftId}/screenshot`,
+      formData,
+      { ...getAuthHeaders(), headers: { ...getAuthHeaders().headers, 'Content-Type': 'multipart/form-data' } }
+    ),
     getPendingVerifications: () => axios.get(`${EARNINGS_URL}/verification/pending`, getAuthHeaders()),
     verifyShift: (id, status, notes) => axios.put(`${EARNINGS_URL}/verification/${id}`, { verification_status: status, verification_notes: notes }, getAuthHeaders())
   },

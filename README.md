@@ -1,6 +1,6 @@
 # FairGig Platform (SOFTEC 2026)
 
-**Gig Worker Income & Rights Platform**
+**Gig Worker Income Transparency & Rights Platform**
 
 FairGig empowers gig workers to log, verify, and understand their earnings across platforms, while enabling labour advocates to detect systemic unfairness through data-driven insights.
 
@@ -8,207 +8,238 @@ FairGig empowers gig workers to log, verify, and understand their earnings acros
 
 ## 🚀 System Architecture
 
-This project strictly follows competition constraints and production-grade practices:
-
-* **6 Microservices Architecture**
-  * 4 × FastAPI (Auth, Earnings, Anomaly, Analytics)
-  * 2 × Node.js (Grievance, Certificate)
-* **Modern Frontend:** React (Vite) with clean, responsive UI
-* **Independent Databases:** Each service uses its own **PostgreSQL database**
-* **Cloud-Ready Design:** Fully deployable on Render (backend) and Vercel (frontend)
-* **Secure Authentication:** JWT-based authentication with role-based access control
-* **Cloud Media Storage:** Screenshot uploads handled via Cloudinary
-* **Seeded Realistic Dataset:** 100+ workers across multiple cities (Lahore, Karachi, Islamabad)
+* **6 Independent Microservices**
+  * 4 × FastAPI Python: `auth`, `earnings`, `anomaly`, `analytics`
+  * 2 × Node.js Express: `grievance`, `certificate`
+* **Frontend:** React + Vite with Recharts, Framer Motion, Lucide Icons
+* **Databases:** Each service owns its own PostgreSQL database (no cross-DB access)
+* **Cloud Storage:** Cloudinary for screenshot uploads
+* **Auth:** JWT-based with role-based access control (Worker / Verifier / Advocate)
+* **Deployment:** Render (backend) + Vercel (frontend) ready
 
 ---
 
 ## 🔌 Inter-Service Communication
 
-All services communicate strictly via REST APIs:
+All services communicate strictly via REST APIs over HTTP:
 
-* **Auth Service:** Issues JWT tokens and manages roles
-* **Earnings Service:** Core data provider (used by Analytics & Certificate)
-* **Anomaly Service:** Detects statistical irregularities via API
-* **Analytics Service:** Aggregates system-wide insights via Earnings API
-* **Grievance Service:** Independent complaint management (Node.js)
-* **Certificate Service:** Generates printable reports using verified earnings only
-
----
-
-## 🔐 Authentication & Roles
-
-FairGig uses **JWT-based authentication** with role-based access control:
-
-### Roles:
-
-* **Worker:** Logs earnings, uploads screenshots, views analytics
-* **Verifier:** Reviews and validates submitted earnings
-* **Advocate:** Monitors trends, complaints, and system-wide fairness
-
-All protected endpoints require a valid JWT token.
+| From | To | Purpose |
+|---|---|---|
+| Analytics Service | Earnings Service | Fetch shift data for aggregation |
+| Certificate Service | Auth + Earnings | Fetch user profile + verified shifts |
+| Frontend | All 6 Services | Role-based UI access via JWT |
 
 ---
 
-## 📊 Core Features
+## 🔐 Roles & Access Control
 
-### ✔ Earnings Logger
-* Log shifts (platform, hours, earnings, deductions, net)
-* CSV import supported
-* Screenshot upload (Cloudinary)
-
-### ✔ Screenshot Verification
-* Verifiers approve / reject / mark unverifiable
-* Verification status stored and displayed
-
-### ✔ Worker Analytics Dashboard
-* Weekly/monthly trends
-* Effective hourly rate
-* Commission tracking
-* City-wide median comparison (computed from real data)
-
-### ✔ Anomaly Detection (FastAPI)
-* Z-score + IQR based detection
-* Flags unusual deductions or income drops
-* Provides human-readable explanations
-
-### ✔ Grievance Board (Node.js)
-* Workers post complaints
-* Advocates tag, cluster, and resolve issues
-
-### ✔ Advocate Analytics Panel
-* Commission trends
-* Income distribution by city
-* Complaint clusters
-* Workers with >20% income drop (vulnerability flag)
-
-### ✔ Income Certificate Generator
-* Printable HTML report
-* Uses only **verified earnings**
-* Export-ready for landlords or banks
+| Role | What They Can Do |
+|---|---|
+| **Worker** | Log shifts, upload screenshots, view own analytics, run anomaly check, file grievances, download certificate |
+| **Verifier** | View pending screenshot submissions, approve / reject / mark unverifiable |
+| **Advocate** | View system-wide analytics, commission trends, vulnerability watchlist, grievance board |
 
 ---
 
-## 🏃♂️ How to Run Locally
+## 📊 Implemented Features
 
-Each service runs independently. Use separate terminals. Ensure PostgreSQL is running locally and update the respective `.env` files first.
+### ✅ 1. Earnings Logger (Worker Dashboard)
+* Log new shift: Platform, Date, Hours Worked, Gross, Deductions, Net Received
+* **Screenshot upload** via drag-click uploader — image sent to Cloudinary, URL stored in DB
+* Auto-sets shift to `pending` verification status after screenshot upload
+* View last 10 shifts in a detailed table
+* CSV bulk import supported (`POST /api/earnings/shifts/import-csv`)
 
-### 0. Environment Setup & Seeding
-Copy the `.env.example` to `.env` in each service folder and configure your PostgreSQL connection and Cloudinary keys.
+### ✅ 2. Screenshot Verification (Verifier Panel)
+* Verifier sees all shifts that have a screenshot attached and are `pending`
+* Can view linked Cloudinary evidence image
+* Three actions per shift: **Approve** (verified), **Reject** (disputed), **Blurry** (unverifiable)
+* Queue auto-clears after action
+
+### ✅ 3. Worker Analytics Dashboard
+* **4 stat cards:** Total Net Earnings, Avg Hourly Rate, Avg Commission %, Verified Shifts count
+* **Bar + Line chart:** Last 14 shifts showing Net Received (bars) + Commission Rate trend (line)
+* **City Median comparison:** Your hourly rate vs city-wide anonymous median
+* **AI Anomaly Check panel:** One-click statistical anomaly detection on your shift history
+
+### ✅ 4. Anomaly Detection (FastAPI — Anomaly Service)
+* Z-score + IQR statistical analysis on earnings history
+* Flags: unusual deductions, sudden income drops, abnormal hourly rates
+* Returns human-readable English explanation per anomaly
+* Severity levels: `low`, `medium`, `high`
+
+### ✅ 5. Grievance Board (Node.js — Grievance Service)
+* Workers post public/anonymous complaints
+* Categories: Commission Change, Unjust Deactivation, Payment Delay, Rating Manipulation, Other
+* Filter complaints by platform (Careem, Foodpanda, Bykea)
+* Advocates can tag and update status (open → under_review → escalated → resolved)
+* Anonymous mode: worker identity hidden from other workers
+
+### ✅ 6. Advocate Analytics Panel
+* **4 KPI cards:** Total Workers, Vulnerability Flags, Avg Platform Commission, Total Shifts
+* **Commission Rate Over Time** chart: per-platform line chart (Careem, Foodpanda, Bykea)
+* **Vulnerability Watchlist:** Workers with >20% month-over-month income drop, auto-detected
+* **Income Distribution table:** Avg vs Median daily income by city and category
+
+### ✅ 7. Income Certificate (Node.js — Certificate Service)
+* Fetches only `verified` shifts from Earnings API (never unverified data)
+* Aggregates: Total Gross, Total Deductions, Net Income, Shift Count, Total Hours, Avg Hourly Rate
+* Renders a fully print-optimized HTML page
+* Unique Certificate Reference ID generated per download
+* One-click HTML download via frontend
+
+---
+
+## 🏃 How to Run Locally
+
+### Prerequisites
+- PostgreSQL running locally
+- Node.js 18+, Python 3.10+
+- Cloudinary account (free tier works)
+
+### 0. Setup Environment & Seed Data
+Copy `.env.example` → `.env` in each service folder and fill in values.
+
 ```bash
-# Seed the initial databases for Auth & Earnings
 cd seed
 pip install psycopg2-binary python-dotenv passlib bcrypt
 python seed_data.py
 ```
+Seeds: 1 Advocate, 1 Verifier, 100 Workers, 2000+ shifts across 3 cities.
 
-### 1. Auth Service
+### 1. Auth Service (Port 8001)
 ```bash
 cd services/auth
 pip install -r requirements.txt
 python main.py
 ```
-(Port 8001)
 
-### 2. Earnings Service
+### 2. Earnings Service (Port 8002)
 ```bash
 cd services/earnings
 pip install -r requirements.txt
 python main.py
 ```
-(Port 8002)
 
-### 3. Anomaly Service
+### 3. Anomaly Service (Port 8003)
 ```bash
 cd services/anomaly
 pip install -r requirements.txt
 python main.py
 ```
-(Port 8003)
 
-### 4. Grievance Service
+### 4. Grievance Service (Port 8004)
 ```bash
 cd services/grievance
 npm install
 npm start
 ```
-(Port 8004)
 
-### 5. Analytics Service
+### 5. Analytics Service (Port 8005)
 ```bash
 cd services/analytics
 pip install -r requirements.txt
 python main.py
 ```
-(Port 8005)
 
-### 6. Certificate Service
+### 6. Certificate Service (Port 8006)
 ```bash
 cd services/certificate
 npm install
 npm start
 ```
-(Port 8006)
 
-### 7. Frontend
+### 7. Frontend (Port 5173)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-http://localhost:5173
 
 ---
 
 ## 🔐 Demo Credentials
 
-| Role     | Email                                               |
-| -------- | --------------------------------------------------- |
-| Worker   | ahmed@gmail.com (or worker1@gmail.com)                      |
-| Verifier | verifier@fairgig.com |
-| Advocate | advocate@fairgig.com |
+| Role | Name | Email | Password |
+|---|---|---|---|
+| **Worker 1** | Waseem | waseem@gmail.com | password123 |
+| **Worker 2** | Wasqas | wasqas@gmail.com | password123 |
+| **Verifier** | Mubisher | mubisher@fairgig.com | password123 |
+| **Advocate** | Adnan | adnan@fairgig.com | password123 |
 
-Password: `password123`
+---
+
+## 🌍 Environment Variables Per Service
+
+### `services/auth/.env`
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/auth_db
+JWT_SECRET_KEY=your-secret
+```
+
+### `services/earnings/.env`
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/earnings_db
+JWT_SECRET_KEY=your-secret
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+### `services/anomaly/.env`
+```
+JWT_SECRET_KEY=your-secret
+```
+
+### `services/grievance/.env`
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/grievance_db
+JWT_SECRET_KEY=your-secret
+PORT=8004
+```
+
+### `services/analytics/.env`
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/analytics_db
+JWT_SECRET_KEY=your-secret
+EARNINGS_SERVICE_URL=http://localhost:8002
+```
+
+### `services/certificate/.env`
+```
+JWT_SECRET_KEY=your-secret
+EARNINGS_SERVICE_URL=http://localhost:8002
+AUTH_SERVICE_URL=http://localhost:8001
+PORT=8006
+```
+
+> ⚠️ `JWT_SECRET_KEY` must be the **exact same string** across all services.
 
 ---
 
 ## 🌟 Technical Highlights
 
-* **PostgreSQL per service** (true microservices isolation)
-* **JWT-secured APIs with RBAC**
-* **Cloudinary-based file handling**
-* **Real-time API-based aggregation (no hardcoded data)**
-* **Statistical anomaly detection (Z-score + IQR)**
-* **Print-optimized certificate rendering**
-* **Clean modular architecture with REST boundaries**
-
----
-
-## 🧠 System Philosophy
-
-FairGig is designed as a **transparency layer for gig economies**.
-
-Instead of relying on platform-provided summaries, it:
-* Verifies worker-submitted data
-* Detects hidden inconsistencies
-* Surfaces systemic unfairness at scale
+* PostgreSQL per service (zero cross-database access)
+* JWT-secured APIs with strict RBAC
+* Cloudinary cloud storage for screenshots
+* Real-time API-based data aggregation (no hardcoded data)
+* Z-score + IQR statistical anomaly detection
+* Print-optimized income certificate (verified data only)
+* Clean REST boundaries between all 6 microservices
 
 ---
 
 ## 🚀 Deployment
 
-* **Backend:** Render (multi-service deployment via web services mapping)
-* **Frontend:** Vercel
-
-Environment variables are required for:
-* `DATABASE_URL`
-* `JWT_SECRET_KEY`
-* `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-* Service Cross-Domain URLs (`AUTH_SERVICE_URL`, `EARNINGS_SERVICE_URL`, etc).
+* **Backend:** Render (one web service per microservice)
+* **Frontend:** Vercel (set VITE_ environment variables in dashboard)
 
 ---
 
-## ⚠️ Notes
+## ⚠️ Judge Notes
 
-* All analytics are computed dynamically from stored data
-* No hardcoded metrics are used
-* Verification ensures trust in reported earnings
+* All analytics computed dynamically from live database data
+* No hardcoded metrics or fake numbers anywhere
+* Screenshot evidence linked to verified Cloudinary URLs
+* Privacy maintained: anonymous grievances hide worker identity
+* Certificate only reflects verifier-approved shifts
