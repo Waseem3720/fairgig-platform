@@ -1,40 +1,31 @@
 """
 FairGig Anomaly Detection Engine
 ================================
-Statistical anomaly detection for gig worker earnings.
+Statistical and Rule-Based anomaly detection for gig worker earnings.
 
-Methods used:
-1. Z-Score Analysis — flags values more than 2 standard deviations from mean
-2. IQR (Interquartile Range) — flags outliers beyond 1.5×IQR
-3. Month-over-Month Change — flags income drops > 20%
-4. Commission Rate Analysis — flags deduction rates that deviate from platform norms
-
-All explanations are returned in plain, human-readable language
-so a non-technical gig worker can understand what happened.
+Architecture:
+1. LAYER 1: Rule-Based Engine (Mandatory, 1+ records)
+2. LAYER 2: Statistical Engine (4+ records)
+3. LAYER 3: Temporal Analysis (Month-over-month)
 """
 
 import statistics
 from typing import List
-from datetime import date, timedelta
+from datetime import date
 from collections import defaultdict
 from schemas import EarningsRecord, AnomalyFlag
 
 
 def calculate_z_score(value: float, values: List[float]) -> float:
-    """Calculate Z-score for a value against a list of values."""
-    if len(values) < 3:
-        return 0.0
+    if len(values) < 3: return 0.0
     mean = statistics.mean(values)
     stdev = statistics.stdev(values)
-    if stdev == 0:
-        return 0.0
+    if stdev == 0: return 0.0
     return (value - mean) / stdev
 
 
 def calculate_iqr_bounds(values: List[float]) -> tuple:
-    """Calculate IQR lower and upper bounds."""
-    if len(values) < 4:
-        return (min(values), max(values))
+    if len(values) < 4: return (min(values), max(values))
     sorted_vals = sorted(values)
     n = len(sorted_vals)
     q1 = sorted_vals[n // 4]
@@ -44,23 +35,13 @@ def calculate_iqr_bounds(values: List[float]) -> tuple:
 
 
 def detect_anomalies(records: List[EarningsRecord]) -> List[AnomalyFlag]:
-    """
-    Run all anomaly detection checks on a worker's earnings history.
-    Returns a list of flagged anomalies with plain-language explanations.
-    """
-    if len(records) < 3:
-        return []
-
     anomalies = []
+    if not records:
+        return anomalies
 
-    # Sort by date
     sorted_records = sorted(records, key=lambda r: r.date)
-
-    # Extract key metrics
-    net_earnings = [r.net_received for r in sorted_records]
-    gross_earnings = [r.gross_earned for r in sorted_records]
-    deductions = [r.platform_deductions for r in sorted_records]
-    hours = [r.hours_worked for r in sorted_records]
+    
+    # Pre-compute metrics to avoid zero division
     commission_rates = [
         (r.platform_deductions / r.gross_earned * 100) if r.gross_earned > 0 else 0
         for r in sorted_records
@@ -69,31 +50,115 @@ def detect_anomalies(records: List[EarningsRecord]) -> List[AnomalyFlag]:
         (r.net_received / r.hours_worked) if r.hours_worked > 0 else 0
         for r in sorted_records
     ]
+    
+    # Fallback expected hourly rate threshold for Layer 1
+    MIN_EXPECTED_HOURLY = 250.0  # Minimum acceptable PKR per hour
 
-    # ── Check 1: Unusual Deductions (Z-Score) ──
-    if len(commission_rates) >= 3:
+    # =========================================================
+    # LAYER 1: RULE-BASED ENGINE (Must trigger on any dataset sum)
+    # =========================================================
+    for i, record in enumerate(sorted_records):
+        # 1. Extreme Deduction (Deduction > 40%)
+        rate = commission_rates[i]
+        if rate > 40.0:
+            anomalies.append(AnomalyFlag(
+                type="extreme_deduction",
+                severity="high",
+                date=str(record.date),
+                metric="Commission Rate (Rule)",
+                expected_range="< 40.0%",
+                actual_value=f"{rate:.1f}%",
+                explanation=(
+                    f"On {record.date}, {record.platform} deducted {rate:.1f}% "
+                    f"(PKR {record.platform_deductions:,.0f} out of PKR {record.gross_earned:,.0f}). "
+                    f"Any deduction over 40% is flagged as a high-severity anomaly regardless of your history."
+                )
+            ))
+
+        # 2. Low Efficiency / Hourly Rate
+        hr_rate = hourly_rates[i]
+        if hr_rate > 0 and hr_rate < MIN_EXPECTED_HOURLY:
+            anomalies.append(AnomalyFlag(
+                type="low_hourly_rate",
+                severity="medium",
+                date=str(record.date),
+                metric="Hourly Rate (Rule)",
+                expected_range=f"> PKR {MIN_EXPECTED_HOURLY:.0f}/hr",
+                actual_value=f"PKR {hr_rate:.0f}/hr",
+                explanation=(
+                    f"On {record.date}, your hourly pay on {record.platform} dropped to PKR {hr_rate:.0f}/hr, "
+                    f"which is below the minimum fair threshold of PKR {MIN_EXPECTED_HOURLY:.0f}/hr."
+                )
+            ))
+
+        # 3. Sudden Shift-to-Shift Income Drop (> 20%)
+        if i > 0:
+            prev_net = sorted_records[i-1].net_received
+            curr_net = record.net_received
+            if prev_net > 0 and curr_net < (prev_net * 0.8):
+                drop_pct = ((prev_net - curr_net) / prev_net) * 100
+                # Ensure hours didn't drop drastically to explain the income drop
+                if record.hours_worked >= sorted_records[i-1].hours_worked * 0.8:
+                    anomalies.append(AnomalyFlag(
+                        type="shift_income_drop",
+                        severity="high" if drop_pct > 40 else "medium",
+                        date=str(record.date),
+                        metric="Shift Net Income (Rule)",
+                        expected_range=f"> PKR {prev_net * 0.8:,.0f}",
+                        actual_value=f"PKR {curr_net:,.0f} (-{drop_pct:.1f}%)",
+                        explanation=(
+                            f"Your earnings on {record.date} were PKR {curr_net:,.0f}, a sudden drop "
+                            f"of {drop_pct:.1f}% compared to your previous shift, despite working similar hours."
+                        )
+                    ))
+
+    # =========================================================
+    # LAYER 2: STATISTICAL ENGINE (Only for 4+ records)
+    # =========================================================
+    if len(sorted_records) >= 4:
+        valid_hourly = [r for r in hourly_rates if r > 0]
+        
+        # Z-Score for Unusual Deductions
         mean_commission = statistics.mean(commission_rates)
         for i, record in enumerate(sorted_records):
             z = calculate_z_score(commission_rates[i], commission_rates)
-            if abs(z) > 2.0 and commission_rates[i] > mean_commission:
-                severity = "high" if z > 3 else "medium"
+            # Prevent double-flagging if Layer 1 already caught it (> 40%)
+            if abs(z) > 2.0 and commission_rates[i] > mean_commission and commission_rates[i] <= 40.0:
                 anomalies.append(AnomalyFlag(
-                    type="high_deduction",
-                    severity=severity,
+                    type="statistical_high_deduction",
+                    severity="medium",
                     date=str(record.date),
-                    metric="Commission Rate",
+                    metric="Commission Rate (Z-Score)",
                     expected_range=f"{mean_commission:.1f}% ± {statistics.stdev(commission_rates):.1f}%",
                     actual_value=f"{commission_rates[i]:.1f}%",
                     explanation=(
-                        f"On {record.date}, {record.platform} deducted {commission_rates[i]:.1f}% "
-                        f"of your gross earnings (PKR {record.platform_deductions:,.0f} out of "
-                        f"PKR {record.gross_earned:,.0f}). Your usual commission rate is around "
-                        f"{mean_commission:.1f}%. This is unusually high and may indicate "
-                        f"a platform fee change or billing error."
-                    ),
+                        f"Based on your history, the {commission_rates[i]:.1f}% deduction on {record.date} "
+                        f"is a statistical outlier (Z > 2.0). Your usual rate is ~{mean_commission:.1f}%."
+                    )
                 ))
 
-    # ── Check 2: Sudden Income Drops (Month-over-Month) ──
+        # IQR for Hourly Rates
+        if len(valid_hourly) >= 4:
+            lower_bound, upper_bound = calculate_iqr_bounds(valid_hourly)
+            for i, record in enumerate(sorted_records):
+                # Avoid double flagging Layer 1 low hourly rate
+                if 0 < hourly_rates[i] < lower_bound and hourly_rates[i] >= MIN_EXPECTED_HOURLY:
+                    anomalies.append(AnomalyFlag(
+                        type="iqr_low_hourly",
+                        severity="low",
+                        date=str(record.date),
+                        metric="Hourly Rate (IQR)",
+                        expected_range=f"> PKR {lower_bound:,.0f}/hr",
+                        actual_value=f"PKR {hourly_rates[i]:,.0f}/hr",
+                        explanation=(
+                            f"Your hourly pay of PKR {hourly_rates[i]:,.0f}/hr on {record.date} is statistically "
+                            f"lower than your usual range (lower bound: PKR {lower_bound:,.0f}/hr)."
+                        )
+                    ))
+
+    # =========================================================
+    # LAYER 3: TEMPORAL ANALYSIS (MONTHLY)
+    # =========================================================
     monthly_income = defaultdict(float)
     for record in sorted_records:
         month_key = record.date.strftime("%Y-%m") if isinstance(record.date, date) else str(record.date)[:7]
@@ -105,107 +170,26 @@ def detect_anomalies(records: List[EarningsRecord]) -> List[AnomalyFlag]:
         curr_income = monthly_income[months[i]]
 
         if prev_income > 0:
-            change_pct = ((curr_income - prev_income) / prev_income) * 100
-
-            if change_pct < -20:
-                severity = "high" if change_pct < -40 else "medium"
+            change_pct = ((prev_income - curr_income) / prev_income) * 100
+            if change_pct > 20: # 20% drop
+                severity = "high" if change_pct > 40 else "medium"
                 anomalies.append(AnomalyFlag(
-                    type="income_drop",
+                    type="monthly_income_drop",
                     severity=severity,
                     date=months[i],
                     metric="Monthly Net Income",
-                    expected_range=f"PKR {prev_income:,.0f} (previous month)",
-                    actual_value=f"PKR {curr_income:,.0f} ({change_pct:+.1f}%)",
+                    expected_range=f"> PKR {prev_income * 0.8:,.0f}",
+                    actual_value=f"PKR {curr_income:,.0f} (-{change_pct:.1f}%)",
                     explanation=(
-                        f"Your net income in {months[i]} was PKR {curr_income:,.0f}, "
-                        f"which is {abs(change_pct):.1f}% lower than the previous month "
-                        f"(PKR {prev_income:,.0f}). A drop of more than 20% may indicate "
-                        f"reduced hours, platform algorithm changes, or zone reassignment. "
-                        f"If you did not reduce your working hours, this warrants investigation."
-                    ),
+                        f"Your total net income dropped by {change_pct:.1f}% from {months[i-1]} to {months[i]}. "
+                        f"A drop >20% across months is a critical vulnerability signal."
+                    )
                 ))
-
-    # ── Check 3: Unusually Low Hourly Rate (IQR) ──
-    valid_hourly = [r for r in hourly_rates if r > 0]
-    if len(valid_hourly) >= 4:
-        lower_bound, upper_bound = calculate_iqr_bounds(valid_hourly)
-        median_rate = statistics.median(valid_hourly)
-
-        for i, record in enumerate(sorted_records):
-            if hourly_rates[i] > 0 and hourly_rates[i] < lower_bound:
-                anomalies.append(AnomalyFlag(
-                    type="low_hourly_rate",
-                    severity="medium",
-                    date=str(record.date),
-                    metric="Effective Hourly Rate",
-                    expected_range=f"PKR {lower_bound:,.0f} – {upper_bound:,.0f}/hr",
-                    actual_value=f"PKR {hourly_rates[i]:,.0f}/hr",
-                    explanation=(
-                        f"On {record.date}, your effective hourly rate on {record.platform} "
-                        f"was PKR {hourly_rates[i]:,.0f}/hr, well below your usual range of "
-                        f"PKR {lower_bound:,.0f}–{upper_bound:,.0f}/hr (median: PKR {median_rate:,.0f}/hr). "
-                        f"This could mean higher wait times, shorter trips, or increased deductions."
-                    ),
-                ))
-
-    # ── Check 4: Unusual Working Hours ──
-    if len(hours) >= 3:
-        mean_hours = statistics.mean(hours)
-        for i, record in enumerate(sorted_records):
-            z = calculate_z_score(record.hours_worked, hours)
-            if z > 2.5 and record.hours_worked > mean_hours:
-                anomalies.append(AnomalyFlag(
-                    type="unusual_hours",
-                    severity="low",
-                    date=str(record.date),
-                    metric="Hours Worked",
-                    expected_range=f"{mean_hours:.1f} hrs (avg)",
-                    actual_value=f"{record.hours_worked:.1f} hrs",
-                    explanation=(
-                        f"On {record.date}, you logged {record.hours_worked:.1f} hours on "
-                        f"{record.platform}, significantly more than your average of "
-                        f"{mean_hours:.1f} hours. While this may be intentional, extremely "
-                        f"long shifts can affect safety and earnings efficiency."
-                    ),
-                ))
-
-    # ── Check 5: Platform Commission Rate Changes ──
-    platform_rates = defaultdict(list)
-    for i, record in enumerate(sorted_records):
-        platform_rates[record.platform].append((record.date, commission_rates[i]))
-
-    for platform, rates in platform_rates.items():
-        if len(rates) >= 5:
-            # Check if recent rates are higher than historical
-            historical = [r[1] for r in rates[:-3]]
-            recent = [r[1] for r in rates[-3:]]
-
-            if historical and recent:
-                hist_avg = statistics.mean(historical)
-                recent_avg = statistics.mean(recent)
-
-                if recent_avg > hist_avg * 1.15:  # 15% increase
-                    anomalies.append(AnomalyFlag(
-                        type="rate_change",
-                        severity="high",
-                        date=str(rates[-1][0]),
-                        metric=f"{platform} Commission Rate Trend",
-                        expected_range=f"{hist_avg:.1f}% (historical avg)",
-                        actual_value=f"{recent_avg:.1f}% (recent avg)",
-                        explanation=(
-                            f"{platform} appears to have increased commission rates. "
-                            f"Your historical average was {hist_avg:.1f}%, but recent shifts "
-                            f"show an average of {recent_avg:.1f}%. This {recent_avg - hist_avg:.1f}% "
-                            f"increase reduces your take-home pay. Other workers on the platform may "
-                            f"be experiencing similar changes."
-                        ),
-                    ))
 
     return anomalies
 
 
 def generate_summary(worker_name: str, records_count: int, anomalies: List[AnomalyFlag]) -> str:
-    """Generate a plain-language summary of all findings."""
     if not anomalies:
         return (
             f"Good news, {worker_name}! After analyzing {records_count} earnings records, "
@@ -215,8 +199,7 @@ def generate_summary(worker_name: str, records_count: int, anomalies: List[Anoma
 
     high_count = sum(1 for a in anomalies if a.severity == "high")
     medium_count = sum(1 for a in anomalies if a.severity == "medium")
-    types = set(a.type for a in anomalies)
-
+    
     summary_parts = [
         f"After analyzing {records_count} earnings records for {worker_name}, "
         f"we found {len(anomalies)} potential issue(s):"
@@ -227,42 +210,31 @@ def generate_summary(worker_name: str, records_count: int, anomalies: List[Anoma
     if medium_count > 0:
         summary_parts.append(f"  • {medium_count} medium-severity pattern(s) worth reviewing")
 
-    if "income_drop" in types:
-        summary_parts.append("  • Significant income drops were detected month-over-month")
-    if "high_deduction" in types:
-        summary_parts.append("  • Some platform deductions appear unusually high")
-    if "rate_change" in types:
-        summary_parts.append("  • Platform commission rates may have changed recently")
-
     summary_parts.append(
-        "\nWe recommend reviewing the detailed flags below and comparing with "
-        "fellow workers on the community board to see if these patterns are widespread."
+        "\nYour shifts were scanned using our 3-Layer Hybrid Engine (Rule-based, Statistical, and Temporal). "
+        "Review the exact flags below to see which rules triggered."
     )
 
     return "\n".join(summary_parts)
 
 
 METHODOLOGY = """
-FairGig Anomaly Detection Methodology
-======================================
+FairGig Anomaly Detection Methodology (Hybrid Engine)
+===================================================
 
-This service uses statistical methods to flag unusual patterns in gig worker earnings:
+To ensure robustness on both small (1-3 records) and large datasets, FairGig uses a 3-Layer Engine:
 
-1. **Z-Score Analysis**: Identifies values more than 2 standard deviations from the worker's
-   historical mean. Used for commission rate and working hours analysis.
+1. **Layer 1: Rule-Based Engine (Immediate Fallback):**
+   Runs on every record. Instantly flags egregious changes without requiring history:
+   - Commission rates > 40.0%
+   - Hourly rates dipping below acceptable thresholds (PKR 250/hr)
+   - Shift-to-shift income dropping by >20% on similar hours
 
-2. **IQR (Interquartile Range)**: Identifies outliers beyond 1.5× the interquartile range.
-   More robust against extreme values. Used for hourly rate analysis.
+2. **Layer 2: Statistical Engine (Requires 4+ records):**
+   Activates once enough baseline data is present.
+   - **Z-Score Analysis**: Identifies statistical outliers beyond Z=2.0
+   - **IQR (Interquartile Range)**: Finds hourly rate outliers robustly
 
-3. **Month-over-Month Comparison**: Flags monthly income drops exceeding 20%, which may
-   indicate platform changes, algorithm shifts, or account issues.
-
-4. **Platform Rate Trend Detection**: Compares recent commission rates against historical
-   averages per platform to detect systematic rate increases.
-
-Limitations:
-- Requires at least 3 records for basic analysis, 5+ for trend detection
-- Cannot distinguish between worker-initiated changes (e.g., fewer hours) and platform issues
-- Seasonal variations may trigger false positives
-- All flags are statistical suggestions, not definitive proof of unfairness
+3. **Layer 3: Temporal Analysis (Monthly):**
+   Compares total aggregate income month-over-month to flag drops >20%.
 """

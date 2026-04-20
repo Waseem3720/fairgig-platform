@@ -50,6 +50,7 @@ def create_shift(
         zone=payload.zone,
         category=payload.category,
         notes=payload.notes,
+        verification_status=VerificationStatus.pending,
     )
     db.add(shift)
     db.commit()
@@ -177,6 +178,7 @@ async def import_csv(
                 city=row.get("city"),
                 zone=row.get("zone"),
                 category=row.get("category", "ride_hailing"),
+                verification_status=VerificationStatus.pending,
             )
             db.add(shift)
             count += 1
@@ -223,9 +225,8 @@ def get_pending_verifications(
     user: dict = Depends(require_role("verifier", "advocate")),
     db: Session = Depends(get_db),
 ):
-    """Get all shifts pending verification (with screenshots)."""
+    """Get all shifts pending verification (with or without screenshots)."""
     shifts = db.query(ShiftLog).filter(
-        ShiftLog.screenshot_url.isnot(None),
         ShiftLog.verification_status == VerificationStatus.pending,
     ).order_by(ShiftLog.created_at.desc()).all()
     return [ShiftLogResponse.model_validate(s) for s in shifts]
@@ -375,6 +376,3 @@ def get_worker_history(
     ).order_by(ShiftLog.date.desc()).limit(limit).all()
 
     return [ShiftLogResponse.model_validate(s) for s in shifts]
-
-
-import os

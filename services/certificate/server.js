@@ -27,7 +27,7 @@ app.get('/api/certificate/generate', authenticateToken, async (req, res) => {
     const user = profileRes.data;
 
     // 2. Fetch all verified shifts to aggregate manually
-    let shiftsUrl = `${EARNINGS_SERVICE_URL}/api/earnings/shifts?verification_status=verified&limit=1000`;
+    let shiftsUrl = `${EARNINGS_SERVICE_URL}/api/earnings/shifts?verification_status=verified&limit=500`;
     if (start_date) shiftsUrl += `&start_date=${start_date}`;
     if (end_date) shiftsUrl += `&end_date=${end_date}`;
 

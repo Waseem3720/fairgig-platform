@@ -6,69 +6,56 @@ const HomePage = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+      background: 'var(--bg-secondary)',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: "'Inter', sans-serif",
-      color: '#e2e8f0',
+      fontFamily: "var(--font-body)",
+      color: 'var(--text-primary)',
       position: 'relative',
       overflow: 'hidden',
     }}>
 
-      {/* Background glow orbs */}
+      {/* Decorative Orbs */}
       <div style={{
-        position: 'absolute', top: '-200px', left: '50%', transform: 'translateX(-50%)',
-        width: '800px', height: '800px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+        position: 'absolute', top: '-100px', left: '60%',
+        width: '600px', height: '600px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       <div style={{
-        position: 'absolute', bottom: '-100px', right: '-100px',
-        width: '500px', height: '500px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)',
+        position: 'absolute', bottom: '-80px', left: '-50px',
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
       {/* ── NAVBAR ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 48px', height: '68px',
-        borderBottom: '1px solid rgba(99,102,241,0.15)',
+        padding: '0 60px', height: '80px',
         position: 'relative', zIndex: 10,
+        background: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid var(--border-light)',
       }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontWeight: 800, fontSize: '1.1rem',
-            fontFamily: "'Outfit', sans-serif",
-            boxShadow: '0 0 16px rgba(99,102,241,0.4)',
-          }}>F</div>
-          <span style={{
-            fontWeight: 700, fontSize: '1.2rem', color: '#fff',
-            fontFamily: "'Outfit', sans-serif",
-          }}>FairGig</span>
+        {/* Modern Logo Branding */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '-1.5px' }}>
+          <span className="logo-fair">Fair</span>
+          <span className="logo-gig">Gig</span>
         </div>
 
-        {/* Nav buttons */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <Link to="/login" style={{
-            padding: '8px 22px', borderRadius: 8,
-            border: '1px solid rgba(99,102,241,0.35)',
-            color: '#a5b4fc', textDecoration: 'none',
-            fontWeight: 500, fontSize: '0.9rem',
-            background: 'rgba(99,102,241,0.08)',
+            padding: '10px 24px', borderRadius: 'var(--radius-md)',
+            color: 'var(--text-primary)', textDecoration: 'none',
+            fontWeight: 700, fontSize: '0.9rem',
             transition: 'all 0.2s',
           }}>Sign In</Link>
-          <Link to="/signup" style={{
-            padding: '8px 22px', borderRadius: 8,
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            color: 'white', textDecoration: 'none',
-            fontWeight: 600, fontSize: '0.9rem',
-            boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
-          }}>Sign Up</Link>
+          <Link to="/signup" className="btn btn-primary" style={{
+            padding: '10px 24px', borderRadius: 'var(--radius-md)',
+            fontSize: '0.9rem',
+          }}>Join Now</Link>
         </div>
       </nav>
 
@@ -76,86 +63,74 @@ const HomePage = () => {
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        textAlign: 'center', padding: '60px 24px',
+        textAlign: 'center', padding: '80px 24px',
         position: 'relative', zIndex: 10,
       }}>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, ease: 'easeOut' }}
-          style={{ maxWidth: 640 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          style={{ maxWidth: 800 }}
         >
           {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: '7px',
-              padding: '6px 16px', borderRadius: 999,
-              background: 'rgba(99,102,241,0.12)',
-              border: '1px solid rgba(99,102,241,0.35)',
-              color: '#a5b4fc', fontSize: '0.78rem',
-              fontWeight: 600, letterSpacing: '0.5px',
-              textTransform: 'uppercase', marginBottom: 28,
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '8px 20px', borderRadius: 999,
+              background: 'white',
+              border: '1px solid var(--border-light)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              color: 'var(--text-secondary)', fontSize: '0.8rem',
+              fontWeight: 700, letterSpacing: '0.8px',
+              textTransform: 'uppercase', marginBottom: 32,
             }}
           >
-            🇵🇰 Built for Pakistan's Gig Workers
+            🇵🇰 Built for Pakistan's Gig Economy
           </motion.div>
 
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(2.4rem, 5.5vw, 3.8rem)',
-            fontWeight: 800, color: '#fff',
-            lineHeight: 1.12, marginBottom: 20,
-            fontFamily: "'Outfit', sans-serif",
-            letterSpacing: '-0.5px',
+            fontSize: 'clamp(2.8rem, 6vw, 4.5rem)',
+            fontWeight: 800, color: 'var(--text-primary)',
+            lineHeight: 1.05, marginBottom: 24,
+            letterSpacing: '-2px',
           }}>
-            Know What You Earn.{' '}
-            <span style={{
-              background: 'linear-gradient(135deg, #818cf8, #a78bfa)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Fight for What's Fair.
+            Transparency for Workers,{' '}
+            <span style={{ color: 'var(--accent-primary)' }}>
+              Fairness for All.
             </span>
           </h1>
 
           {/* Subtitle */}
           <p style={{
-            fontSize: '1.1rem', color: '#94a3b8',
-            lineHeight: 1.75, marginBottom: 48,
-            maxWidth: 500, margin: '0 auto 48px',
+            fontSize: '1.25rem', color: 'var(--text-secondary)',
+            lineHeight: 1.6, marginBottom: 48,
+            maxWidth: 600, margin: '0 auto 52px',
+            fontWeight: 500,
           }}>
-            FairGig lets gig workers track earnings, detect unfair deductions,
-            file grievances, and generate verified income certificates — all in one place.
+            Track your earnings, generate verified certificates, and identify 
+            unfair platform practices with our AI-powered anomaly detection.
           </p>
 
-          {/* ── MAIN CTA BUTTONS ── */}
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-              <Link to="/signup" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                padding: '16px 42px', borderRadius: 12,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: 'white', textDecoration: 'none',
-                fontWeight: 700, fontSize: '1.05rem',
-                boxShadow: '0 8px 30px rgba(99,102,241,0.45)',
-                letterSpacing: '0.2px',
+          {/* CTAs */}
+          <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+              <Link to="/signup" className="btn btn-primary" style={{
+                padding: '18px 48px', fontSize: '1.1rem',
+                borderRadius: 'var(--radius-lg)',
               }}>
-                Create Account →
+                Get Started Free
               </Link>
             </motion.div>
 
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-              <Link to="/login" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                padding: '16px 42px', borderRadius: 12,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#e2e8f0', textDecoration: 'none',
-                fontWeight: 600, fontSize: '1.05rem',
-                backdropFilter: 'blur(8px)',
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+              <Link to="/login" className="btn btn-secondary" style={{
+                padding: '18px 48px', fontSize: '1.1rem',
+                borderRadius: 'var(--radius-lg)',
+                background: '#fff',
               }}>
                 Sign In
               </Link>
@@ -163,31 +138,32 @@ const HomePage = () => {
           </div>
         </motion.div>
 
-        {/* ── Feature Pills ── */}
+        {/* Feature Pills */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
           style={{
-            display: 'flex', flexWrap: 'wrap', gap: '10px',
-            justifyContent: 'center', marginTop: 64,
+            display: 'flex', flexWrap: 'wrap', gap: '14px',
+            justifyContent: 'center', marginTop: 80,
           }}
         >
           {[
-            { icon: '💰', label: 'Earnings Tracker' },
-            { icon: '📸', label: 'Screenshot Verification' },
-            { icon: '🤖', label: 'AI Anomaly Detection' },
-            { icon: '📋', label: 'Grievance Board' },
-            { icon: '📊', label: 'Advocate Analytics' },
-            { icon: '📄', label: 'Income Certificate' },
+            { icon: '💰', label: 'Income Verification' },
+            { icon: '🛡️', label: 'Rights Advocacy' },
+            { icon: '📈', label: 'Earning Analytics' },
+            { icon: '🤖', label: 'Anomaly Detection' },
           ].map((pill) => (
             <div key={pill.label} style={{
-              display: 'flex', alignItems: 'center', gap: '7px',
-              padding: '8px 16px',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 999, fontSize: '0.85rem',
-              color: '#94a3b8', fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '12px 24px',
+              background: 'white',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-md)', 
+              fontSize: '0.95rem',
+              color: 'var(--text-primary)', 
+              fontWeight: 700,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
             }}>
               <span>{pill.icon}</span>
               <span>{pill.label}</span>
@@ -196,48 +172,48 @@ const HomePage = () => {
         </motion.div>
       </div>
 
-      {/* ── Stats Row ── */}
+      {/* Stats Row */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
+        transition={{ delay: 0.7, duration: 0.6 }}
         style={{
-          display: 'flex', justifyContent: 'center', gap: '60px',
-          padding: '28px 48px',
-          borderTop: '1px solid rgba(99,102,241,0.15)',
-          background: 'rgba(0,0,0,0.2)',
+          display: 'flex', justifyContent: 'center', gap: '80px',
+          padding: '48px 24px',
+          background: 'white',
+          borderTop: '1px solid var(--border-light)',
           flexWrap: 'wrap',
           position: 'relative', zIndex: 10,
         }}
       >
         {[
-          { value: '100+', label: 'Workers Onboarded' },
-          { value: '8', label: 'Platforms Supported' },
-          { value: '3', label: 'Cities Covered' },
-          { value: '6', label: 'Microservices' },
+          { color: 'var(--accent-primary)', value: '1,200', label: 'Active Workers' },
+          { color: '#8b5cf6', value: 'PKR 4.2M', label: 'Tracked Income' },
+          { color: '#3b82f6', value: '150+', label: 'Resolved Cases' },
         ].map((stat) => (
           <div key={stat.label} style={{ textAlign: 'center' }}>
             <div style={{
-              fontSize: '1.8rem', fontWeight: 800, color: '#818cf8',
-              fontFamily: "'Outfit', sans-serif",
-            }}>{stat.value}</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>
+              fontSize: '2.2rem', fontWeight: 800, color: stat.color,
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: '-1px',
+            }}>{stat.value}+</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
               {stat.label}
             </div>
           </div>
         ))}
       </motion.div>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer style={{
-        textAlign: 'center', padding: '16px 24px',
-        borderTop: '1px solid rgba(99,102,241,0.1)',
-        background: 'rgba(0,0,0,0.3)',
-        fontSize: '0.82rem', color: '#475569',
-        position: 'relative', zIndex: 10,
+        textAlign: 'center', padding: '32px 24px',
+        fontSize: '0.9rem', color: 'var(--text-muted)',
+        fontWeight: 500,
+        background: 'var(--bg-secondary)',
+        borderTop: '1px solid var(--border-light)',
       }}>
-        <span style={{ color: '#6366f1', fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>FairGig</span>
-        {' · '}SOFTEC 2026 · Empowering Pakistan's gig economy, one shift at a time.
+        © 2026 <span style={{ color: 'var(--accent-primary)', fontWeight: 800 }}>FairGig</span>
+        {' · '}Empowering Pakistan's frontline workers.
       </footer>
 
     </div>

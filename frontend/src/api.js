@@ -37,7 +37,7 @@ export const api = {
 
   anomaly: {
     // Judges call this directly, but we can also use it in frontend
-    detect: (data) => axios.post(`${ANOMALY_URL}/detect`, data)
+    detect: (data) => axios.post(`${ANOMALY_URL}/detect`, data, getAuthHeaders())
   },
 
   grievance: {

@@ -26,7 +26,7 @@ async def fetch_shifts(request: Request):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"{EARNINGS_SERVICE_URL}/api/earnings/shifts?limit=1000",
+                f"{EARNINGS_SERVICE_URL}/api/earnings/shifts?limit=500",
                 headers={"Authorization": auth_header}
             )
             response.raise_for_status()

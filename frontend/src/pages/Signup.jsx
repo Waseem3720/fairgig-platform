@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { motion } from 'framer-motion';
-import { UserPlus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -38,48 +38,43 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-wrapper">
-      {/* Back to home */}
+    <div className="auth-wrapper" style={{ background: 'var(--bg-secondary)', paddingTop: '80px', paddingBottom: '80px' }}>
       <Link to="/" style={{
-        position: 'absolute', top: '24px', left: '32px',
-        display: 'flex', alignItems: 'center', gap: '6px',
-        color: '#94a3b8', fontSize: '0.88rem', fontWeight: 500,
+        position: 'absolute', top: '32px', left: '40px',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600,
         textDecoration: 'none', zIndex: 10,
       }}>
-        <ArrowLeft size={16} /> Back to Home
+        <ArrowLeft size={18} /> Home
       </Link>
 
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="glass-panel auth-card"
-        style={{ maxWidth: '500px' }}
+        className="glass-panel"
+        style={{ width: '100%', maxWidth: '580px', padding: '60px', background: '#fff' }}
       >
-        {/* Logo + Title */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: 'rgba(99,102,241,0.15)',
-            border: '1px solid rgba(99,102,241,0.3)',
-            color: '#818cf8', marginBottom: '16px',
-            boxShadow: '0 0 24px rgba(99,102,241,0.2)',
-          }}>
-            <UserPlus size={28} />
-          </div>
-          <h1 style={{ fontSize: '1.7rem', marginBottom: '6px' }}>Create Account</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.93rem' }}>
-            Join FairGig — it's free
+        <div className="logo-container" style={{ marginBottom: '32px' }}>
+          <span className="logo-fair">Fair</span>
+          <span className="logo-gig">Gig</span>
+        </div>
+
+        <div style={{ marginBottom: '40px' }}>
+          <h1 style={{ fontSize: '2.2rem', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Get Started
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: 500 }}>
+            Join the platform built for transparency.
           </p>
         </div>
 
         {error && (
           <div style={{
-            background: 'rgba(239,68,68,0.1)', color: '#f87171',
-            border: '1px solid rgba(239,68,68,0.25)',
-            padding: '12px 16px', borderRadius: 'var(--radius-sm)',
-            marginBottom: '20px', fontSize: '0.88rem', textAlign: 'center',
+            background: 'rgba(239,68,68,0.05)', color: 'var(--danger)',
+            border: '1px solid rgba(239,68,68,0.1)',
+            padding: '16px', borderRadius: 'var(--radius-md)',
+            marginBottom: '24px', fontSize: '0.9rem', fontWeight: 600,
           }}>
             {error}
           </div>
@@ -99,34 +94,36 @@ const Signup = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
-            <input
-              type="email"
-              name="email"
-              className="form-control"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="e.g. ali@example.com"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                name="email"
+                className="form-control"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                placeholder="ali@example.com"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                name="password"
+                className="form-control"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+              />
+            </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
-              type="password"
-              name="password"
-              className="form-control"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="••••••••"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">I am a...</label>
+            <label className="form-label">Account Type</label>
             <select
               name="role"
               className="form-control"
@@ -140,7 +137,7 @@ const Signup = () => {
           </div>
 
           {formData.role === 'worker' && (
-            <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label className="form-label">Primary Platform</label>
                 <input
@@ -149,7 +146,7 @@ const Signup = () => {
                   className="form-control"
                   value={formData.platform}
                   onChange={handleChange}
-                  placeholder="e.g. Careem, Foodpanda"
+                  placeholder="e.g. Careem"
                 />
               </div>
               <div className="form-group">
@@ -163,24 +160,24 @@ const Signup = () => {
                   placeholder="e.g. Karachi"
                 />
               </div>
-            </>
+            </div>
           )}
 
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: '8px' }}
+            style={{ width: '100%', padding: '18px', fontSize: '1rem', marginTop: '16px' }}
             disabled={loading}
           >
-            {loading ? 'Creating Account...' : 'Create Account →'}
+            {loading ? 'Creating Account...' : 'Join FairGig →'}
           </button>
         </form>
 
-        <div style={{ marginTop: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+        <div style={{ marginTop: '40px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: 500 }}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: '#818cf8', fontWeight: 600 }}>
-              Sign In →
+            <Link to="/login" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
+              Sign In
             </Link>
           </p>
         </div>

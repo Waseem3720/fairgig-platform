@@ -52,8 +52,12 @@ const WorkerDashboard = () => {
     fetchData();
   }, [user]);
 
-  const handleDownloadCertificate = () => {
-    api.certificate.download();
+  const handleDownloadCertificate = async () => {
+    try {
+      await api.certificate.download();
+    } catch (err) {
+      alert('Failed to download certificate: ' + (err.response?.data?.detail || err.message));
+    }
   };
 
   const handleAddShift = async (e) => {
@@ -88,7 +92,6 @@ const WorkerDashboard = () => {
   const runAnomalyCheck = async () => {
     setCheckingAnomaly(true);
     try {
-      // Send the history directly to Anomaly API as per judge rules
       const payload = {
         worker_name: user.full_name,
         earnings_history: shifts.map(s => ({
@@ -106,12 +109,13 @@ const WorkerDashboard = () => {
       setAnomalyResult(res.data);
     } catch (err) {
       console.error(err);
+      alert('Failed to run anomaly check: ' + (err.response?.data?.detail || err.message));
     } finally {
       setCheckingAnomaly(false);
     }
   };
 
-  if (loading || !summary) return <div style={{padding: '50px'}}>Loading dashboard...</div>;
+  if (loading || !summary) return <div style={{padding: '100px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600}}>Initializing Secure Dashboard...</div>;
 
   // Chart Data preparation
   const recentShiftsData = [...shifts].reverse().slice(-14).map(s => ({
@@ -125,80 +129,84 @@ const WorkerDashboard = () => {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
         <div>
-          <h1>My Earnings Overview</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Welcome back, {user.full_name}. Here is your financial snapshot.</p>
+          <h1 style={{fontSize: '2.4rem', marginBottom: '8px'}}>Financial Snapshot</h1>
+          <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Hello, {user.full_name}. Here is your income and fairness overview.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '14px' }}>
           <button onClick={() => setShowAddModal(true)} className="btn btn-secondary">
             <Plus size={18} /> Log Shift
           </button>
           <button onClick={handleDownloadCertificate} className="btn btn-primary">
-            <Download size={18} /> Get Income Certificate
+            <Download size={18} /> Income Certificate
           </button>
         </div>
       </div>
 
       {/* Top Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '40px' }}>
         <motion.div initial={{y: 20, opacity: 0}} animate={{y:0, opacity: 1}} transition={{delay: 0.1}} className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Total Net Earnings</h3>
-          <h2 style={{color: 'var(--success)'}}>PKR {summary.total_net.toLocaleString()}</h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>From {summary.shift_count} logged shifts</p>
+          <h3 style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px'}}>Total Net Earnings</h3>
+          <h2 style={{color: 'var(--success)', fontSize: '1.8rem'}}>PKR {summary.total_net.toLocaleString()}</h2>
+          <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '12px', fontWeight: 600}}>From {summary.shift_count} logged shifts</p>
         </motion.div>
         
         <motion.div initial={{y: 20, opacity: 0}} animate={{y:0, opacity: 1}} transition={{delay: 0.2}} className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>My Avg. Hourly Rate</h3>
-          <h2>PKR {summary.avg_hourly_rate.toLocaleString()}/hr</h2>
+          <h3 style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px'}}>Avg. Hourly Rate</h3>
+          <h2 style={{fontSize: '1.8rem'}}>PKR {summary.avg_hourly_rate.toLocaleString()}/hr</h2>
           {medianStat && (
-            <p style={{fontSize: '0.8rem', color: summary.avg_hourly_rate < medianStat.median_hourly_rate ? 'var(--warning)' : 'var(--success)', marginTop: '8px'}}>
-              City Median: PKR {medianStat.median_hourly_rate}/hr
+            <p style={{fontSize: '0.8rem', color: summary.avg_hourly_rate < medianStat.median_hourly_rate ? 'var(--danger)' : 'var(--success)', marginTop: '12px', fontWeight: 600}}>
+              {summary.avg_hourly_rate < medianStat.median_hourly_rate ? '↓ Below City Median' : '↑ Above City Median'}
             </p>
           )}
         </motion.div>
 
         <motion.div initial={{y: 20, opacity: 0}} animate={{y:0, opacity: 1}} transition={{delay: 0.3}} className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Avg. Commission Paid</h3>
-          <h2 style={{color: 'var(--danger)'}}>{summary.avg_commission_rate.toFixed(1)}%</h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Of total gross earnings</p>
+          <h3 style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px'}}>Avg. Fee %</h3>
+          <h2 style={{color: 'var(--danger)', fontSize: '1.8rem'}}>{summary.avg_commission_rate.toFixed(1)}%</h2>
+          <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '12px', fontWeight: 600}}>Platform deductions</p>
         </motion.div>
 
         <motion.div initial={{y: 20, opacity: 0}} animate={{y:0, opacity: 1}} transition={{delay: 0.4}} className="glass-card">
-          <h3 style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase'}}>Verification Status</h3>
-          <h2 style={{color: 'var(--info)'}}>{summary.verified_count} / {summary.shift_count}</h2>
-          <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px'}}>Shifts manually verified</p>
+          <h3 style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px'}}>Verified Logs</h3>
+          <h2 style={{color: 'var(--info)', fontSize: '1.8rem'}}>{summary.verified_count} / {summary.shift_count}</h2>
+          <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '12px', fontWeight: 600}}>Confirmed by advocates</p>
         </motion.div>
       </div>
 
       {/* Main Charts Area */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '40px' }}>
         
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{marginBottom: '20px'}}>Recent Earnings Trend</h3>
-          <div style={{ height: '300px' }}>
+        <div className="glass-panel" style={{ padding: '32px' }}>
+          <h3 style={{marginBottom: '24px', fontSize: '1.2rem'}}>Earnings Trend</h3>
+          <div style={{ height: '350px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={recentShiftsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-strong)" vertical={false} />
-                <XAxis dataKey="date" stroke="var(--text-muted)" tick={{fontSize: 12}} />
-                <YAxis yAxisId="left" stroke="var(--text-muted)" tick={{fontSize: 12}} />
-                <YAxis yAxisId="right" orientation="right" stroke="var(--danger)" tick={{fontSize: 12}} unit="%" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--text-muted)" tick={{fontSize: 12, fontWeight: 600}} />
+                <YAxis yAxisId="left" stroke="var(--text-muted)" tick={{fontSize: 12, fontWeight: 600}} />
+                <YAxis yAxisId="right" orientation="right" stroke="var(--danger)" tick={{fontSize: 12, fontWeight: 600}} unit="%" />
                 <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-strong)', borderRadius: '8px' }}
-                  itemStyle={{color: '#fff'}}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid var(--border-light)', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}
+                  itemStyle={{ fontWeight: 700, color: 'var(--text-primary)' }}
+                  labelStyle={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}
                 />
-                <Legend />
-                <Bar yAxisId="left" dataKey="net" name="Net Received (PKR)" fill="var(--accent-primary)" radius={[4,4,0,0]} />
-                <Line yAxisId="right" type="monotone" dataKey="commissionRate" name="Commission %" stroke="var(--danger)" strokeWidth={2} dot={{r: 4}} />
+                <Legend iconType="circle" />
+                <Bar yAxisId="left" dataKey="net" name="Net (PKR)" fill="var(--accent-primary)" radius={[6,6,0,0]} />
+                <Line yAxisId="right" type="monotone" dataKey="commissionRate" name="Fee %" stroke="var(--danger)" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{marginBottom: '20px'}}>FairGig AI Anomaly Check</h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-            Run your recent shifts through our statistical anomaly detection engine to check if platforms are treating you fairly.
+        <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px'}}>
+            <AlertCircle size={20} color="var(--accent-primary)" />
+            <h3 style={{fontSize: '1.2rem'}}>AI Fairness Check</h3>
+          </div>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5, fontWeight: 500 }}>
+            Analyze your recent shifts using our 3-Layer engine to detect unusual platform behavior.
           </p>
           
           {!anomalyResult ? (
@@ -206,76 +214,76 @@ const WorkerDashboard = () => {
               onClick={runAnomalyCheck} 
               disabled={checkingAnomaly || shifts.length < 3}
               className="btn btn-primary" 
-              style={{ marginTop: 'auto', padding: '16px' }}
+              style={{ marginTop: 'auto', padding: '18px' }}
             >
-              {checkingAnomaly ? 'Analyzing Data...' : 'Run Analysis Now'}
+              {checkingAnomaly ? 'Detecting...' : 'Verify Fairness Now'}
             </button>
           ) : (
-            <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', overflowY: 'auto', flex: 1 }}>
-              <p style={{ fontSize: '0.9rem', marginBottom: '16px', color: anomalyResult.anomalies_found > 0 ? 'var(--warning)' : 'var(--success)' }}>
+            <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '14px', overflowY: 'auto', flex: 1, border: '1px solid var(--border-light)' }}>
+              <p style={{ fontSize: '0.9rem', marginBottom: '20px', fontWeight: 700, lineHeight: 1.4, color: anomalyResult.anomalies_found > 0 ? 'var(--danger)' : 'var(--success)' }}>
                 {anomalyResult.summary}
               </p>
               {anomalyResult.anomalies.map((a, i) => (
-                <div key={i} style={{ borderLeft: `3px solid var(--${a.severity === 'high' ? 'danger' : 'warning'})`, padding: '8px 12px', background: 'rgba(0,0,0,0.2)', marginBottom: '8px', fontSize: '0.85rem' }}>
-                  <strong style={{ display: 'block', marginBottom: '4px' }}>{a.metric} Flag</strong>
-                  {a.explanation}
+                <div key={i} style={{ borderLeft: `4px solid var(--${a.severity === 'high' ? 'danger' : 'warning'})`, padding: '12px 16px', background: '#fff', borderRadius: '0 10px 10px 0', marginBottom: '12px', fontSize: '0.85rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                  <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--text-primary)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px' }}>{a.metric} Flag</strong>
+                  <span style={{color: 'var(--text-secondary)', fontWeight: 500}}>{a.explanation}</span>
                 </div>
               ))}
             </div>
           )}
           {shifts.length < 3 && !anomalyResult && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '8px', textAlign: 'center' }}>Need at least 3 logged shifts to run check.</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '12px', textAlign: 'center', fontWeight: 600 }}>Need at least 3 shifts for AI scan.</p>
           )}
         </div>
 
       </div>
 
       {/* Shifts Table */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <h3 style={{marginBottom: '20px'}}>Detailed Shift Log</h3>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Platform</th>
-                <th>Net Earned</th>
-                <th>Commission</th>
-                <th>Hourly Rate</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shifts.slice(0, 10).map((s, idx) => (
-                <tr key={idx}>
-                  <td>{format(new Date(s.date), 'MMM dd, yyyy')}</td>
-                  <td>{s.platform}</td>
-                  <td style={{ fontWeight: 600 }}>PKR {s.net_received.toLocaleString()}</td>
-                  <td>
+      <h3 style={{marginBottom: '20px', fontSize: '1.2rem', paddingLeft: '4px'}}>Detailed Earnings Log</h3>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Platform</th>
+              <th>Net Earned</th>
+              <th>Commission</th>
+              <th>Hourly Rate</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...shifts].slice(0, 15).map((s, idx) => (
+              <tr key={idx}>
+                <td style={{ fontWeight: 600 }}>{format(new Date(s.date), 'MMM dd, yyyy')}</td>
+                <td>{s.platform}</td>
+                <td style={{ fontWeight: 800, color: 'var(--text-primary)' }}>PKR {s.net_received.toLocaleString()}</td>
+                <td style={{ fontWeight: 600 }}>
+                  <span style={{color: (s.platform_deductions / s.gross_earned) > 0.3 ? 'var(--danger)' : 'var(--text-primary)'}}>
                     {s.gross_earned > 0 ? ((s.platform_deductions / s.gross_earned) * 100).toFixed(1) : 0}% 
-                    <span style={{color:'var(--text-muted)', fontSize:'0.8rem', display:'block'}}>(-{s.platform_deductions})</span>
-                  </td>
-                  <td>{s.hours_worked > 0 ? `PKR ${(s.net_received / s.hours_worked).toFixed(0)}/hr` : '-'}</td>
-                  <td>
-                    <span className={`badge badge-${s.verification_status}`}>
-                      {s.verification_status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                  <span style={{color:'var(--text-muted)', fontSize:'0.8rem', marginLeft:'8px' }}>(-{s.platform_deductions})</span>
+                </td>
+                <td style={{ fontWeight: 600 }}>{s.hours_worked > 0 ? `PKR ${(s.net_received / s.hours_worked).toFixed(0)}/hr` : '-'}</td>
+                <td>
+                  <span className={`badge badge-${s.verification_status}`}>
+                    {s.verification_status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Add Shift Modal */}
+      {/* Modals remain same but use improved form styles from index.css */}
       {showAddModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="glass-card" style={{ width: '500px', maxWidth: '90%' }}>
-            <h2 style={{ marginBottom: '24px' }}>Log New Shift</h2>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <motion.div initial={{scale: 0.9, opacity: 0}} animate={{scale: 1, opacity: 1}} className="glass-panel" style={{ width: '560px', maxWidth: '90%', padding: '40px', background: '#fff' }}>
+            <h2 style={{ marginBottom: '32px', fontSize: '1.8rem' }}>Log New Shift</h2>
             <form onSubmit={handleAddShift}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group mb-0">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group">
                   <label className="form-label">Platform</label>
                   <select className="form-control" value={newShift.platform} onChange={e => setNewShift({...newShift, platform: e.target.value})}>
                     <option>Careem</option>
@@ -284,52 +292,48 @@ const WorkerDashboard = () => {
                     <option>InDrive</option>
                   </select>
                 </div>
-                <div className="form-group mb-0">
+                <div className="form-group">
                   <label className="form-label">Date</label>
                   <input type="date" className="form-control" value={newShift.date} onChange={e => setNewShift({...newShift, date: e.target.value})} required/>
                 </div>
-                <div className="form-group mb-0">
+                <div className="form-group">
                   <label className="form-label">Hours Worked</label>
                   <input type="number" step="0.5" className="form-control" value={newShift.hours_worked} onChange={e => setNewShift({...newShift, hours_worked: parseFloat(e.target.value)})} required/>
                 </div>
-                <div className="form-group mb-0">
-                  <label className="form-label">Gross Earned (PKR)</label>
+                <div className="form-group">
+                  <label className="form-label">Gross (PKR)</label>
                   <input type="number" className="form-control" value={newShift.gross_earned} onChange={e => setNewShift({...newShift, gross_earned: parseFloat(e.target.value)})} required/>
                 </div>
-                <div className="form-group mb-0">
+                <div className="form-group">
                   <label className="form-label">Deductions (PKR)</label>
                   <input type="number" className="form-control" value={newShift.platform_deductions} onChange={e => setNewShift({...newShift, platform_deductions: parseFloat(e.target.value)})} required/>
                 </div>
-                <div className="form-group mb-0">
+                <div className="form-group">
                   <label className="form-label">Net Received (PKR)</label>
                   <input type="number" className="form-control" value={newShift.net_received} onChange={e => setNewShift({...newShift, net_received: parseFloat(e.target.value)})} required/>
                 </div>
               </div>
 
-              {/* Screenshot Upload */}
-              <div className="form-group" style={{ marginTop: '16px' }}>
-                <label className="form-label">📸 Earnings Screenshot (Optional but recommended)</label>
+              <div className="form-group" style={{ marginTop: '10px' }}>
+                <label className="form-label">Proof Screenshot</label>
                 <div style={{
-                  border: '2px dashed var(--border-strong)',
-                  borderRadius: '8px',
-                  padding: '16px',
+                  border: '2px dashed var(--border-light)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '24px',
                   textAlign: 'center',
                   cursor: 'pointer',
-                  background: screenshotFile ? 'rgba(59,130,246,0.05)' : 'transparent',
+                  background: screenshotFile ? 'rgba(16,185,129,0.03)' : 'var(--bg-secondary)',
                   transition: 'all 0.2s',
                 }}
                   onClick={() => document.getElementById('screenshot-input').click()}
                 >
                   {screenshotFile ? (
-                    <div style={{ color: 'var(--accent-primary)', fontSize: '0.9rem' }}>
-                      ✅ <strong>{screenshotFile.name}</strong>
-                      <br />
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click to change</span>
+                    <div style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
+                      ✅ {screenshotFile.name}
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      📁 Click to upload screenshot<br />
-                      <span style={{ fontSize: '0.8rem' }}>PNG, JPG accepted • Helps verifiers confirm your earnings</span>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>
+                      Click to upload shift screenshot
                     </div>
                   )}
                 </div>
@@ -342,14 +346,14 @@ const WorkerDashboard = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
                 <button type="button" onClick={() => { setShowAddModal(false); setScreenshotFile(null); }} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={uploadingScreenshot}>
-                  {uploadingScreenshot ? 'Uploading Screenshot...' : 'Save Shift'}
+                  {uploadingScreenshot ? 'Saving...' : 'Confirm Log'}
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
