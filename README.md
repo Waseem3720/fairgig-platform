@@ -43,45 +43,45 @@ All services communicate strictly via REST APIs over HTTP:
 
 ## 📊 Implemented Features
 
-### ✅ 1. Earnings Logger (Worker Dashboard)
+###  1. Earnings Logger (Worker Dashboard)
 * Log new shift: Platform, Date, Hours Worked, Gross, Deductions, Net Received
 * **Screenshot upload** via drag-click uploader — image sent to Cloudinary, URL stored in DB
 * Auto-sets shift to `pending` verification status after screenshot upload
 * View last 10 shifts in a detailed table
 * CSV bulk import supported (`POST /api/earnings/shifts/import-csv`)
 
-### ✅ 2. Screenshot Verification (Verifier Panel)
+###  2. Screenshot Verification (Verifier Panel)
 * Verifier sees all shifts that have a screenshot attached and are `pending`
 * Can view linked Cloudinary evidence image
 * Three actions per shift: **Approve** (verified), **Reject** (disputed), **Blurry** (unverifiable)
 * Queue auto-clears after action
 
-### ✅ 3. Worker Analytics Dashboard
+###  3. Worker Analytics Dashboard
 * **4 stat cards:** Total Net Earnings, Avg Hourly Rate, Avg Commission %, Verified Shifts count
 * **Bar + Line chart:** Last 14 shifts showing Net Received (bars) + Commission Rate trend (line)
 * **City Median comparison:** Your hourly rate vs city-wide anonymous median
 * **AI Anomaly Check panel:** One-click statistical anomaly detection on your shift history
 
-### ✅ 4. Anomaly Detection (FastAPI — Anomaly Service)
+###  4. Anomaly Detection (FastAPI — Anomaly Service)
 * Z-score + IQR statistical analysis on earnings history
 * Flags: unusual deductions, sudden income drops, abnormal hourly rates
 * Returns human-readable English explanation per anomaly
 * Severity levels: `low`, `medium`, `high`
 
-### ✅ 5. Grievance Board (Node.js — Grievance Service)
+###  5. Grievance Board (Node.js — Grievance Service)
 * Workers post public/anonymous complaints
 * Categories: Commission Change, Unjust Deactivation, Payment Delay, Rating Manipulation, Other
 * Filter complaints by platform (Careem, Foodpanda, Bykea)
 * Advocates can tag and update status (open → under_review → escalated → resolved)
 * Anonymous mode: worker identity hidden from other workers
 
-### ✅ 6. Advocate Analytics Panel
+###  6. Advocate Analytics Panel
 * **4 KPI cards:** Total Workers, Vulnerability Flags, Avg Platform Commission, Total Shifts
 * **Commission Rate Over Time** chart: per-platform line chart (Careem, Foodpanda, Bykea)
 * **Vulnerability Watchlist:** Workers with >20% month-over-month income drop, auto-detected
 * **Income Distribution table:** Avg vs Median daily income by city and category
 
-### ✅ 7. Income Certificate (Node.js — Certificate Service)
+###  7. Income Certificate (Node.js — Certificate Service)
 * Fetches only `verified` shifts from Earnings API (never unverified data)
 * Aggregates: Total Gross, Total Deductions, Net Income, Shift Count, Total Hours, Avg Hourly Rate
 * Renders a fully print-optimized HTML page
